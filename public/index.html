@@ -288,22 +288,50 @@
 
     <!-- TAB ROSTROS -->
     <div id="tab-rostros" class="admin-tab-content active">
-      <div class="grid grid-cols-3 gap-3 mb-4">
-        <input class="admin-input" id="ad-nombre" placeholder="Nombre completo" />
-        <input class="admin-input" id="ad-tracking" placeholder="Tracking ID (número)" type="number" />
-        <button onclick="registrarRostroAdmin()" class="btn-action bg-purple-900/40 hover:bg-purple-700/50 border border-purple-500/50 text-purple-300 text-xs font-bold rounded-lg tracking-widest">+ AGREGAR</button>
+      <div style="background:rgba(167,139,250,0.05);border:1px solid rgba(167,139,250,0.15);border-radius:10px;padding:14px;margin-bottom:14px;">
+        <p class="text-[9px] font-bold text-purple-400/70 uppercase tracking-widest mb-3">Agregar persona conocida</p>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Nombre *</label>
+            <input class="admin-input" id="ad-nombre" placeholder="Nombre completo" />
+          </div>
+          <div>
+            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Tracking ID *</label>
+            <input class="admin-input" id="ad-tracking" placeholder="ID del detector (número)" type="number" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Tipo de Carro</label>
+            <input class="admin-input" id="ad-tipo-carro" placeholder="Ej: Sedan, SUV, Pickup..." />
+          </div>
+          <div>
+            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Placa del Vehículo</label>
+            <input class="admin-input" id="ad-placa-vh" placeholder="Ej: ABC-1234" style="text-transform:uppercase;" />
+          </div>
+        </div>
+        <button onclick="registrarRostroAdmin()" class="btn-action w-full bg-purple-900/40 hover:bg-purple-700/50 border border-purple-500/50 text-purple-300 text-xs font-bold rounded-lg tracking-widest py-2">+ REGISTRAR PERSONA</button>
       </div>
-      <div id="lista-rostros-admin" class="overflow-y-auto" style="max-height:280px;"></div>
+      <div id="lista-rostros-admin" class="overflow-y-auto" style="max-height:220px;"></div>
     </div>
 
     <!-- TAB PLACAS -->
     <div id="tab-placas" class="admin-tab-content">
-      <div class="grid grid-cols-3 gap-3 mb-4">
-        <input class="admin-input" id="ad-placa" placeholder="Número de placa" />
-        <input class="admin-input" id="ad-propietario" placeholder="Propietario (opcional)" />
-        <button onclick="registrarPlacaAdmin()" class="btn-action bg-green-900/40 hover:bg-green-700/50 border border-green-500/50 text-green-300 text-xs font-bold rounded-lg tracking-widest">+ AGREGAR</button>
+      <div style="background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.15);border-radius:10px;padding:14px;margin-bottom:14px;">
+        <p class="text-[9px] font-bold text-green-400/70 uppercase tracking-widest mb-3">Agregar placa conocida</p>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Número de Placa *</label>
+            <input class="admin-input" id="ad-placa" placeholder="Ej: ABC-1234" style="text-transform:uppercase;" />
+          </div>
+          <div>
+            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Propietario</label>
+            <input class="admin-input" id="ad-propietario" placeholder="Nombre del propietario" />
+          </div>
+        </div>
+        <button onclick="registrarPlacaAdmin()" class="btn-action w-full bg-green-900/40 hover:bg-green-700/50 border border-green-500/50 text-green-300 text-xs font-bold rounded-lg tracking-widest py-2">+ REGISTRAR PLACA</button>
       </div>
-      <div id="lista-placas-admin" class="overflow-y-auto" style="max-height:280px;"></div>
+      <div id="lista-placas-admin" class="overflow-y-auto" style="max-height:220px;"></div>
     </div>
   </div>
 </div>
@@ -947,8 +975,20 @@
         fetch('/conocidos/rostros').then(r => r.json()),
         fetch('/conocidos/placas').then(r => r.json())
       ]);
-      renderListaAdmin('lista-rostros-admin', rostros, 'rostro', r => `<span class="text-sm font-bold text-slate-200">${r.nombre}</span><span class="text-[10px] text-slate-500 font-mono-tech ml-2">ID: ${r.tracking_id ?? '—'}</span>`);
-      renderListaAdmin('lista-placas-admin', placas, 'placa', r => `<span class="text-sm font-bold text-green-300 font-mono-tech">${r.numero_placa}</span><span class="text-[10px] text-slate-500 ml-2">${r.propietario || '—'}</span>`);
+      renderListaAdmin('lista-rostros-admin', rostros, 'rostro', r => `
+        <div>
+          <p class="text-sm font-bold text-slate-200">${r.nombre}</p>
+          <div class="flex gap-3 mt-0.5">
+            <span class="text-[10px] text-purple-400 font-mono-tech">ID:${r.tracking_id ?? '—'}</span>
+            ${r.tipo_carro ? `<span class="text-[10px] text-slate-400">${r.tipo_carro}</span>` : ''}
+            ${r.placa      ? `<span class="text-[10px] text-green-400 font-mono-tech">${r.placa}</span>` : ''}
+          </div>
+        </div>`);
+      renderListaAdmin('lista-placas-admin', placas, 'placa', r => `
+        <div>
+          <p class="text-sm font-bold text-green-300 font-mono-tech">${r.numero_placa}</p>
+          ${r.propietario ? `<p class="text-[10px] text-slate-400 mt-0.5">${r.propietario}</p>` : ''}
+        </div>`);
     } catch { mostrarToast('Error cargando lista', 'danger'); }
   }
 
@@ -963,14 +1003,20 @@
   }
 
   async function registrarRostroAdmin() {
-    const nombre = document.getElementById('ad-nombre').value.trim();
-    const tid    = parseInt(document.getElementById('ad-tracking').value);
+    const nombre    = document.getElementById('ad-nombre').value.trim();
+    const tid       = parseInt(document.getElementById('ad-tracking').value);
+    const tipoCarro = document.getElementById('ad-tipo-carro').value.trim();
+    const placaVh   = document.getElementById('ad-placa-vh').value.trim().toUpperCase();
+
     if (!nombre || isNaN(tid)) return mostrarToast('Nombre y Tracking ID requeridos', 'danger');
     try {
-      await fetch('/registrar-rostro', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nombre, tracking_id: tid }) });
-      document.getElementById('ad-nombre').value = '';
-      document.getElementById('ad-tracking').value = '';
-      mostrarToast(`Rostro "${nombre}" registrado`, 'ok');
+      await fetch('/registrar-rostro', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ nombre, tracking_id: tid, tipo_carro: tipoCarro || null, placa: placaVh || null })
+      });
+      ['ad-nombre','ad-tracking','ad-tipo-carro','ad-placa-vh'].forEach(id => document.getElementById(id).value = '');
+      mostrarToast(`"${nombre}" registrado`, 'ok');
       cargarConocidos();
     } catch { mostrarToast('Error al registrar', 'danger'); }
   }
