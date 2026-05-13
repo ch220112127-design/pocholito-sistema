@@ -50,6 +50,15 @@ async function initDB() {
         propietario  VARCHAR(100),
         registrado   DATETIME DEFAULT NOW()
     )`);
+    await q(`CREATE TABLE IF NOT EXISTS conteo_peatonal (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        modulo      VARCHAR(100) DEFAULT NULL,
+        tipo_entrada VARCHAR(30) DEFAULT NULL,
+        foto        VARCHAR(255) DEFAULT NULL,
+        categoria   VARCHAR(30)  DEFAULT NULL,
+        tracking_id INT          DEFAULT NULL,
+        fecha_hora  DATETIME     DEFAULT NOW()
+    )`);
     await q(`ALTER TABLE conteo_peatonal ADD COLUMN IF NOT EXISTS foto        VARCHAR(255) DEFAULT NULL`);
     await q(`ALTER TABLE conteo_peatonal ADD COLUMN IF NOT EXISTS categoria   VARCHAR(30)  DEFAULT NULL`);
     await q(`ALTER TABLE conteo_peatonal ADD COLUMN IF NOT EXISTS tracking_id INT          DEFAULT NULL`);
