@@ -17,16 +17,37 @@ const CARPETA_FOTOS = path.join(__dirname, '..', 'capturas_institucionales');
 app.use('/fotos', express.static(CARPETA_FOTOS));
 
 // ── POOL (mejor que conexión única) ─────────────────────────────────────────
-const pool = mysql.createPool({
-    host:     process.env.MYSQLHOST     || process.env.DB_HOST     || 'localhost',
-    port:     process.env.MYSQLPORT     || process.env.DB_PORT     || 3306,
-    user:     process.env.MYSQLUSER     || process.env.DB_USER     || 'root',
-    password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || 'root',
-    database: process.env.MYSQLDATABASE || process.env.DB_NAME     || 'sistema_conteo',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit:      0
-});
+// Railway provee MYSQL_URL como connection string — úsalo si existe
+function buildPoolConfig() {
+    const urlStr = process.env.MYSQL_URL || process.env.DATABASE_URL;
+    if (urlStr && urlStr.startsWith('mysql')) {
+        const u = new URL(urlStr);
+        console.log(`DB → ${u.hostname}:${u.port}${u.pathname}`);
+        return {
+            host:     u.hostname,
+            port:     parseInt(u.port) || 3306,
+            user:     u.username,
+            password: u.password,
+            database: u.pathname.slice(1),
+            waitForConnections: true,
+            connectionLimit: 10,
+            queueLimit: 0
+        };
+    }
+    console.log(`DB → ${process.env.MYSQLHOST || 'localhost'}:${process.env.MYSQLPORT || 3306}`);
+    return {
+        host:     process.env.MYSQLHOST     || process.env.DB_HOST     || 'localhost',
+        port:     parseInt(process.env.MYSQLPORT || process.env.DB_PORT || 3306),
+        user:     process.env.MYSQLUSER     || process.env.DB_USER     || 'root',
+        password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || 'root',
+        database: process.env.MYSQLDATABASE || process.env.DB_NAME     || 'sistema_conteo',
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+    };
+}
+
+const pool = mysql.createPool(buildPoolConfig());
 
 const q = (sql, params) => new Promise((resolve, reject) =>
     pool.query(sql, params || [], (err, rows) => err ? reject(err) : resolve(rows))
