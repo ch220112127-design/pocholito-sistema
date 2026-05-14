@@ -274,15 +274,13 @@ app.delete('/conocidos/placa/:id', async (req, res) => {
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-initDB().then(() => {
-    const PORT = process.env.PORT || 3000;
-    server.listen(PORT, '0.0.0.0', () => {
-        console.log('\n═══════════════════════════════════════');
-        console.log(`  KERNEL ACTIVO · Puerto ${PORT}`);
-        console.log('  WebSocket (Socket.io) habilitado');
-        console.log('═══════════════════════════════════════\n');
-    });
-}).catch(err => {
-    console.error('Error iniciando server:', err);
-    process.exit(1);
+const PORT = process.env.PORT || 3000;
+
+// Escuchar PRIMERO — Railway necesita ver el puerto activo de inmediato
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`KERNEL ACTIVO · Puerto ${PORT}`);
+    // DB init después de que el puerto ya está abierto
+    initDB()
+        .then(() => console.log('Sistema listo.'))
+        .catch(err => console.error('Error DB init:', err.message));
 });
