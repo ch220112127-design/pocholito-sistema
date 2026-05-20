@@ -76,8 +76,11 @@ async function initDB() {
         id           INT AUTO_INCREMENT PRIMARY KEY,
         numero_placa VARCHAR(20)  NOT NULL UNIQUE,
         propietario  VARCHAR(100) DEFAULT NULL,
+        tipo_carro   VARCHAR(50)  DEFAULT NULL,
         registrado   DATETIME     DEFAULT NOW()
     )`);
+    // Migración: agregar tipo_carro si la tabla ya existía sin esa columna
+    await q(`ALTER TABLE placas_conocidas ADD COLUMN IF NOT EXISTS tipo_carro VARCHAR(50) DEFAULT NULL`).catch(() => {});
     console.log('DB lista.');
 }
 
@@ -205,8 +208,10 @@ app.put('/marcar-conocido/:id', async (req, res) => {
         } else {
             const numPlaca = numero_placa || String(reg.tracking_id || id);
             await q(
-                'INSERT INTO placas_conocidas (numero_placa, propietario) VALUES (?, ?) ON DUPLICATE KEY UPDATE propietario = ?',
-                [numPlaca, propietario || null, propietario || null]
+                `INSERT INTO placas_conocidas (numero_placa, propietario, tipo_carro)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE propietario = VALUES(propietario), tipo_carro = VALUES(tipo_carro)`,
+                [numPlaca, propietario || null, req.body.tipo_carro || null]
             );
             nuevaCategoria = 'Placa_Conocida';
         }
@@ -238,12 +243,14 @@ app.post('/registrar-rostro', async (req, res) => {
 
 // ── POST /registrar-placa ────────────────────────────────────────────────────
 app.post('/registrar-placa', async (req, res) => {
-    const { numero_placa, propietario } = req.body;
+    const { numero_placa, propietario, tipo_carro } = req.body;
     if (!numero_placa) return res.status(400).json({ error: 'Falta numero_placa' });
     try {
         const result = await q(
-            'INSERT INTO placas_conocidas (numero_placa, propietario) VALUES (?, ?) ON DUPLICATE KEY UPDATE propietario = ?',
-            [numero_placa, propietario || null, propietario || null]
+            `INSERT INTO placas_conocidas (numero_placa, propietario, tipo_carro)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE propietario = VALUES(propietario), tipo_carro = VALUES(tipo_carro)`,
+            [numero_placa, propietario || null, tipo_carro || null]
         );
         res.json({ mensaje: 'Placa registrada', id: result.insertId });
     } catch { res.status(500).json({ error: 'Error al registrar' }); }
