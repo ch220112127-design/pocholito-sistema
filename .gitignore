@@ -1,3 +1,5 @@
 node_modules/
 .env
 capturas_institucionales/
+server.err
+server.log

@@ -9,133 +9,191 @@
   <script src="/socket.io/socket.io.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background-color: #030712; background-image: radial-gradient(circle at 50% 0%, rgba(14,165,233,0.10) 0%, transparent 60%), linear-gradient(rgba(255,255,255,0.013) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.013) 1px, transparent 1px); background-size: 100% 100%, 32px 32px, 32px 32px; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
-    ::-webkit-scrollbar { width: 4px; }
+
+    /* ── BASE ── */
+    body { background-color: #020812; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; overflow-x: hidden; }
+    ::-webkit-scrollbar { width: 3px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(56,189,248,.25); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(56,189,248,.2); border-radius: 4px; }
     .font-mono-tech { font-family: 'JetBrains Mono', monospace; }
-    .glass { background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(12px); box-shadow: 0 4px 24px rgba(0,0,0,0.3); transition: border-color 0.3s, box-shadow 0.3s; }
-    .glass:hover { border-color: rgba(56,189,248,0.12); box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(56,189,248,0.04); }
-    .accent-blue   { border-top: 2px solid #38bdf8; }
-    .accent-green  { border-top: 2px solid #4ade80; }
-    .accent-red    { border-top: 2px solid #f87171; }
-    .accent-amber  { border-top: 2px solid #fb923c; }
-    .accent-purple { border-top: 2px solid #a78bfa; }
+
+    /* ── AMBIENT ORBS (fixed, GPU-safe) ── */
+    body::before, body::after {
+      content: ''; position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+      filter: blur(120px); opacity: 0.55; will-change: transform;
+    }
+    body::before {
+      width: 600px; height: 600px; top: -180px; left: -120px;
+      background: radial-gradient(circle, rgba(14,165,233,0.22) 0%, transparent 70%);
+      animation: orb-a 22s ease-in-out infinite;
+    }
+    body::after {
+      width: 500px; height: 500px; bottom: -150px; right: -100px;
+      background: radial-gradient(circle, rgba(139,92,246,0.18) 0%, transparent 70%);
+      animation: orb-b 28s ease-in-out infinite;
+    }
+    @keyframes orb-a { 0%,100%{transform:translate(0,0);} 50%{transform:translate(60px,40px);} }
+    @keyframes orb-b { 0%,100%{transform:translate(0,0);} 50%{transform:translate(-50px,-35px);} }
+
+    /* Grid lines overlay */
+    #main-body { position: relative; background-image: linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px); background-size: 40px 40px; }
+
+    /* ── GLASS CARDS — double-bezel ── */
+    .glass {
+      background: rgba(8,14,30,0.72);
+      border: 1px solid rgba(255,255,255,0.065);
+      backdrop-filter: blur(24px);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 12px 40px rgba(0,0,0,0.45);
+      transition: border-color 0.65s cubic-bezier(0.32,0.72,0,1), box-shadow 0.65s cubic-bezier(0.32,0.72,0,1), transform 0.65s cubic-bezier(0.32,0.72,0,1);
+    }
+    .glass:hover { border-color: rgba(56,189,248,0.16); box-shadow: 0 1px 0 rgba(255,255,255,0.07) inset, 0 20px 60px rgba(0,0,0,0.55), 0 0 40px rgba(56,189,248,0.05); transform: translateY(-1px); }
+
+    /* ── STAT CARDS — premium shell ── */
+    .stat-shell { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 22px; padding: 3px; transition: all 0.65s cubic-bezier(0.32,0.72,0,1); }
+    .stat-shell:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-2px); box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
+    .stat-inner { border-radius: 19px; padding: 22px 20px 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.07); height: 100%; }
+    .stat-num { font-size: 3rem; font-weight: 900; line-height: 1; letter-spacing: -0.04em; font-family: 'JetBrains Mono', monospace; margin: 8px 0 4px; }
+
+    .accent-blue   { border-top: 2px solid rgba(56,189,248,0.9); }
+    .accent-green  { border-top: 2px solid rgba(74,222,128,0.9); }
+    .accent-red    { border-top: 2px solid rgba(248,113,113,0.9); }
+    .accent-amber  { border-top: 2px solid rgba(251,146,60,0.9); }
+    .accent-purple { border-top: 2px solid rgba(167,139,250,0.9); }
 
     /* ── ALERTS ── */
-    @keyframes alert-flash-blue { 0%{box-shadow:inset 0 0 120px rgba(56,189,248,0.7);} 100%{box-shadow:inset 0 0 0 transparent;} }
-    @keyframes alert-flash-red  { 0%{box-shadow:inset 0 0 160px rgba(248,113,113,0.8);} 100%{box-shadow:inset 0 0 0 transparent;} }
+    @keyframes alert-flash-blue { 0%{box-shadow:inset 0 0 140px rgba(56,189,248,0.65);} 100%{box-shadow:inset 0 0 0 transparent;} }
+    @keyframes alert-flash-red  { 0%{box-shadow:inset 0 0 180px rgba(248,113,113,0.75);} 100%{box-shadow:inset 0 0 0 transparent;} }
     .flash-blue { animation: alert-flash-blue 1.5s cubic-bezier(0.32,0.72,0,1); }
     .flash-red  { animation: alert-flash-red  2s   cubic-bezier(0.32,0.72,0,1); }
 
     /* ── FACE CARDS ── */
-    .face-card { background: rgba(3,7,18,0.5); border: 1px solid rgba(255,255,255,.05); border-radius: 12px; overflow: hidden; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; transition: all .35s cubic-bezier(0.32,0.72,0,1); cursor: pointer; }
-    .face-card:hover { border-color: rgba(56,189,248,.45); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(56,189,248,0.15); }
-    .face-card img { width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.5s; }
-    .face-card:hover img { transform: scale(1.06); }
-    .face-card .overlay { position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.9));padding:10px 8px 6px;pointer-events:none; }
+    .face-card { background: rgba(3,7,18,0.6); border: 1px solid rgba(255,255,255,.05); border-radius: 14px; overflow: hidden; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; transition: all 0.55s cubic-bezier(0.34,1.2,0.64,1); cursor: pointer; }
+    .face-card:hover { border-color: rgba(56,189,248,.5); transform: translateY(-4px) scale(1.01); box-shadow: 0 12px 32px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.12); }
+    .face-card img { width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.7s cubic-bezier(0.32,0.72,0,1); }
+    .face-card:hover img { transform: scale(1.08); }
+    .face-card .overlay { position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.92));padding:14px 10px 8px;pointer-events:none; }
 
     /* ── LOG ROWS ── */
-    .log-row { display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,.015);border-radius:8px;border-left:2px solid transparent;transition:background 0.2s; }
-    .log-row:hover { background: rgba(255,255,255,.04); }
-    .log-row.rc { border-left-color: #38bdf8; }
-    .log-row.rd { border-left-color: #f87171; }
-    .log-row.pc { border-left-color: #4ade80; }
-    .log-row.pd { border-left-color: #fb923c; }
+    .log-row { display:flex;align-items:center;gap:12px;padding:11px 14px;background:rgba(255,255,255,0.018);border-radius:12px;border-left:2px solid transparent;transition:background 0.35s cubic-bezier(0.32,0.72,0,1), border-color 0.35s cubic-bezier(0.32,0.72,0,1), transform 0.35s cubic-bezier(0.32,0.72,0,1), box-shadow 0.35s cubic-bezier(0.32,0.72,0,1);border:1px solid rgba(255,255,255,0.04); }
+    .log-row:hover { background:rgba(56,189,248,0.04);border-color:rgba(56,189,248,0.15);transform:translateX(2px); box-shadow:0 4px 16px rgba(0,0,0,0.3); }
+    .log-row.rc { border-left: 2px solid #38bdf8; border-right:none; border-top:none; border-bottom:none; }
+    .log-row.rd { border-left: 2px solid #f87171; border-right:none; border-top:none; border-bottom:none; }
+    .log-row.pc { border-left: 2px solid #4ade80; border-right:none; border-top:none; border-bottom:none; }
+    .log-row.pd { border-left: 2px solid #fb923c; border-right:none; border-top:none; border-bottom:none; }
+    @keyframes rowIn { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+    .log-row-new { animation: rowIn 0.45s cubic-bezier(0.32,0.72,0,1) both; }
+    @keyframes cardIn { from{opacity:0;transform:scale(0.94) translateY(6px);} to{opacity:1;transform:scale(1) translateY(0);} }
+    .face-card-new { animation: cardIn 0.5s cubic-bezier(0.34,1.2,0.64,1) both; }
+    .stat-num { transition: color 0.4s cubic-bezier(0.32,0.72,0,1); }
 
     /* ── BAR CHART ── */
     .bar-wrapper { flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;position:relative;cursor:pointer; }
-    .bar { width:100%;background:linear-gradient(180deg,rgba(56,189,248,0.8) 0%,rgba(56,189,248,0.05) 100%);border-top:2px solid #38bdf8;border-radius:4px 4px 0 0;transition:height 0.7s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 -2px 10px rgba(56,189,248,0.18); }
-    .bar-wrapper:hover .bar { background:linear-gradient(180deg,rgba(56,189,248,1) 0%,rgba(56,189,248,0.3) 100%);box-shadow:0 -4px 20px rgba(56,189,248,0.65); }
-    .bar-tooltip { position:absolute;top:-10px;left:50%;transform:translateX(-50%) translateY(5px);background:#0ea5e9;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;opacity:0;transition:all 0.3s;pointer-events:none;font-weight:700;white-space:nowrap;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.5);font-family:'JetBrains Mono',monospace; }
+    .bar { width:100%;background:linear-gradient(180deg,rgba(56,189,248,0.75) 0%,rgba(56,189,248,0.04) 100%);border-top:2px solid #38bdf8;border-radius:5px 5px 0 0;transition:height 0.9s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 -3px 12px rgba(56,189,248,0.15); }
+    .bar-wrapper:hover .bar { background:linear-gradient(180deg,rgba(56,189,248,1) 0%,rgba(56,189,248,0.25) 100%);box-shadow:0 -6px 24px rgba(56,189,248,0.6); }
+    .bar-tooltip { position:absolute;top:-10px;left:50%;transform:translateX(-50%) translateY(5px);background:#0ea5e9;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;opacity:0;transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;font-weight:700;white-space:nowrap;z-index:10;box-shadow:0 4px 14px rgba(0,0,0,0.5);font-family:'JetBrains Mono',monospace; }
     .bar-tooltip::after { content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);border-width:5px 5px 0;border-style:solid;border-color:#0ea5e9 transparent transparent; }
-    .bar-wrapper:hover .bar-tooltip { opacity:1;transform:translateX(-50%) translateY(-20px); }
+    .bar-wrapper:hover .bar-tooltip { opacity:1;transform:translateX(-50%) translateY(-22px); }
 
     /* ── TERMINAL ── */
-    .terminal { background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,.05);border-radius:10px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#38bdf8;line-height:1.9;box-shadow:inset 0 0 20px rgba(0,0,0,0.5);overflow-y:auto;max-height:200px; }
+    .terminal { background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#38bdf8;line-height:2;box-shadow:inset 0 0 24px rgba(0,0,0,0.6);overflow-y:auto;max-height:200px; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
     .cursor-blink { animation: blink 1s step-end infinite; }
 
     /* ── FILTERS ── */
-    .filtro-input { background-color:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;outline:none;transition:all 0.3s; }
+    .filtro-input { background-color:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.08);color:#e2e8f0;outline:none;transition:all 0.4s cubic-bezier(0.32,0.72,0,1); }
     .filtro-input:hover { border-color:rgba(56,189,248,0.3); }
-    .filtro-input:focus { border-color:#38bdf8;box-shadow:0 0 0 2px rgba(56,189,248,0.18); }
+    .filtro-input:focus { border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,0.12); }
     ::-webkit-calendar-picker-indicator { filter:invert(1) sepia(100%) saturate(1000%) hue-rotate(180deg) brightness(90%);cursor:pointer; }
 
     /* ── BUTTONS ── */
-    .btn-action { transition:all 0.25s cubic-bezier(0.32,0.72,0,1); }
-    .btn-action:hover { transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,0.3); }
-    .btn-action:active { transform:translateY(1px); }
+    .btn-action { transition:all 0.45s cubic-bezier(0.34,1.56,0.64,1); }
+    .btn-action:hover { transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.35); }
+    .btn-action:active { transform:translateY(0) scale(0.98); }
 
     /* ── LOGIN ── */
-    #view-login { position:fixed;inset:0;z-index:100;background:#030712;background-image:radial-gradient(ellipse at 50% -10%,rgba(14,165,233,0.18) 0%,transparent 55%),radial-gradient(ellipse at 85% 80%,rgba(167,139,250,0.08) 0%,transparent 45%),linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px);background-size:100% 100%,100% 100%,32px 32px,32px 32px;display:flex;align-items:center;justify-content:center;padding:20px; }
-    .login-shell { background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:28px;padding:6px;box-shadow:0 0 80px rgba(56,189,248,0.06),0 40px 80px rgba(0,0,0,0.6);width:100%;max-width:420px;animation:loginFadeIn 0.6s forwards; }
-    @keyframes loginFadeIn { from{opacity:0;transform:translateY(24px) scale(0.97);} to{opacity:1;transform:translateY(0) scale(1);} }
-    .login-inner { background:rgba(10,18,35,0.95);border:1px solid rgba(255,255,255,0.06);border-radius:22px;padding:44px 36px 40px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.06); }
-    .login-logo-ring { width:56px;height:56px;border-radius:16px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:28px;box-shadow:0 0 24px rgba(56,189,248,0.1); }
-    .login-field-shell { background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:3px;margin-bottom:12px;transition:border-color 0.3s,box-shadow 0.3s; }
-    .login-field-shell:focus-within { border-color:rgba(56,189,248,0.5);box-shadow:0 0 0 3px rgba(56,189,248,0.08); }
-    .login-field-inner { background:rgba(3,7,18,0.8);border-radius:11px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
-    .login-input { background:transparent;border:none;outline:none;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:14px;width:100%;caret-color:#38bdf8; }
-    .login-input::placeholder { color:rgba(100,116,139,0.7); }
-    .login-btn { width:100%;padding:15px;background:linear-gradient(135deg,rgba(56,189,248,0.15) 0%,rgba(56,189,248,0.08) 100%);border:1px solid rgba(56,189,248,0.35);border-radius:14px;color:#38bdf8;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;transition:all 0.3s;margin-top:20px; }
-    .login-btn:hover { background:linear-gradient(135deg,rgba(56,189,248,0.25) 0%,rgba(56,189,248,0.15) 100%);border-color:rgba(56,189,248,0.6);box-shadow:0 0 32px rgba(56,189,248,0.15);transform:translateY(-1px); }
-    .login-btn.loading { opacity:0.7;pointer-events:none; }
-    #login-error { display:none;color:#f87171;font-size:11px;font-family:'JetBrains Mono',monospace;text-align:center;margin-top:12px;padding:10px;background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.2);border-radius:8px; }
+    #view-login { position:fixed;inset:0;z-index:100;background:#020812;background-image:radial-gradient(ellipse at 50% -10%,rgba(14,165,233,0.2) 0%,transparent 55%),radial-gradient(ellipse at 85% 80%,rgba(139,92,246,0.1) 0%,transparent 45%),linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px);background-size:100% 100%,100% 100%,40px 40px,40px 40px;display:flex;align-items:center;justify-content:center;padding:20px; }
+    .login-shell { background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:32px;padding:6px;box-shadow:0 0 120px rgba(56,189,248,0.09),0 60px 120px rgba(0,0,0,0.7);width:100%;max-width:560px;animation:loginFadeIn 0.7s cubic-bezier(0.34,1.2,0.64,1) forwards; }
+    @keyframes loginFadeIn { from{opacity:0;transform:translateY(32px) scale(0.96);} to{opacity:1;transform:translateY(0) scale(1);} }
+    .login-inner { background:rgba(8,14,32,0.97);border:1px solid rgba(255,255,255,0.07);border-radius:27px;padding:56px 52px 50px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07); }
+    .login-logo-ring { width:72px;height:72px;border-radius:20px;background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.22);display:flex;align-items:center;justify-content:center;margin-bottom:32px;box-shadow:0 0 40px rgba(56,189,248,0.15); }
+    .login-field-shell { background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:4px;margin-bottom:14px;transition:border-color 0.4s,box-shadow 0.4s; }
+    .login-field-shell:focus-within { border-color:rgba(56,189,248,0.55);box-shadow:0 0 0 3px rgba(56,189,248,0.09); }
+    .login-field-inner { background:rgba(3,7,18,0.85);border-radius:13px;padding:18px 20px;display:flex;align-items:center;gap:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
+    .login-input { background:transparent;border:none;outline:none;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:16px;width:100%;caret-color:#38bdf8; }
+    .login-input::placeholder { color:rgba(100,116,139,0.65); }
+    .login-btn { width:100%;padding:18px;background:linear-gradient(135deg,rgba(56,189,248,0.14) 0%,rgba(56,189,248,0.07) 100%);border:1px solid rgba(56,189,248,0.38);border-radius:16px;color:#38bdf8;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;transition:all 0.45s cubic-bezier(0.34,1.56,0.64,1);margin-top:24px; }
+    .login-btn:hover { background:linear-gradient(135deg,rgba(56,189,248,0.24) 0%,rgba(56,189,248,0.14) 100%);border-color:rgba(56,189,248,0.65);box-shadow:0 0 40px rgba(56,189,248,0.18);transform:translateY(-2px); }
+    .login-btn:active { transform:translateY(0) scale(0.98); }
+    .login-btn.loading { opacity:0.65;pointer-events:none; }
+    #login-error { display:none;color:#f87171;font-size:13px;font-family:'JetBrains Mono',monospace;text-align:center;margin-top:14px;padding:12px;background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.2);border-radius:10px; }
 
     /* ── CAMERAS ── */
-    .camera-shell { background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:4px; }
-    .camera-inner { background:rgba(3,7,18,0.85);border-radius:16px;overflow:hidden;position:relative;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center; }
+    .camera-shell { background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:22px;padding:4px; }
+    .camera-inner { background:rgba(2,7,18,0.9);border-radius:18px;overflow:hidden;position:relative;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center; }
     .camera-feed { width:100%;height:100%;object-fit:cover;display:block; }
     .camera-offline { display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;gap:12px; }
-    .camera-inner::after { content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 1px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 2px);pointer-events:none;z-index:2; }
-    .cam-badge-rec { position:absolute;top:12px;left:12px;z-index:5;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:5px 10px; }
-    @keyframes rec-pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-    .rec-dot { width:7px;height:7px;border-radius:50%;background:#ef4444;animation:rec-pulse 1.4s ease-in-out infinite;box-shadow:0 0 6px #ef4444; }
-    .cam-badge-name { position:absolute;bottom:12px;left:12px;z-index:5;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:5px 10px; }
-    .cam-fullscreen-btn { position:absolute;top:12px;right:12px;z-index:5;width:32px;height:32px;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.25s; }
-    .cam-fullscreen-btn:hover { background:rgba(56,189,248,0.15);border-color:rgba(56,189,248,0.4); }
+    .camera-inner::after { content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 1px,rgba(0,0,0,0.035) 2px,rgba(0,0,0,0.035) 2px);pointer-events:none;z-index:2; }
+    .cam-badge-rec { position:absolute;top:12px;left:12px;z-index:5;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.65);backdrop-filter:blur(10px);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:5px 10px; }
+    @keyframes rec-pulse { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+    .rec-dot { width:7px;height:7px;border-radius:50%;background:#ef4444;animation:rec-pulse 1.4s ease-in-out infinite;box-shadow:0 0 8px #ef4444; }
+    .cam-badge-name { position:absolute;bottom:12px;left:12px;z-index:5;background:rgba(0,0,0,0.65);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:5px 10px; }
+    .cam-fullscreen-btn { position:absolute;top:12px;right:12px;z-index:5;width:32px;height:32px;background:rgba(0,0,0,0.65);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+    .cam-fullscreen-btn:hover { background:rgba(56,189,248,0.18);border-color:rgba(56,189,248,0.45);transform:scale(1.1); }
 
-    /* ── MODAL PHOTO ── */
-    .modal-overlay { position:fixed;inset:0;background:rgba(2,6,17,0.92);backdrop-filter:blur(20px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.4s;padding:20px; }
+    /* ── MODAL ── */
+    .modal-overlay { position:fixed;inset:0;background:rgba(2,6,17,0.94);backdrop-filter:blur(24px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.4s cubic-bezier(0.32,0.72,0,1);padding:20px; }
     .modal-overlay.active { opacity:1;pointer-events:auto; }
-    .modal-content { background:rgba(15,23,42,0.85);border:1px solid rgba(56,189,248,0.35);border-radius:20px;overflow:hidden;display:flex;flex-direction:row;max-width:900px;width:100%;min-height:450px;box-shadow:0 0 80px rgba(0,0,0,0.8);transform:scale(0.92);transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1); }
-    .modal-overlay.active .modal-content { transform:scale(1); }
+    .modal-content { background:rgba(8,14,30,0.9);border:1px solid rgba(56,189,248,0.3);border-radius:22px;overflow:hidden;display:flex;flex-direction:row;max-width:900px;width:100%;min-height:450px;max-height:90vh;box-shadow:0 0 100px rgba(0,0,0,0.9),0 0 60px rgba(56,189,248,0.04);transform:scale(0.9) translateY(20px);transition:transform 0.55s cubic-bezier(0.34,1.2,0.64,1),opacity 0.4s; }
+    .modal-overlay.active .modal-content { transform:scale(1) translateY(0); }
     .modal-img-container { flex:1.3;background:#000;position:relative;display:flex;align-items:center;justify-content:center; }
     .modal-img-container img { max-width:100%;max-height:100%;object-fit:contain; }
-    .modal-info { flex:1;padding:40px;display:flex;flex-direction:column;justify-content:center;position:relative;border-left:1px solid rgba(255,255,255,0.05); }
-    .btn-close-modal { position:absolute;top:20px;right:20px;color:#64748b;cursor:pointer;transition:all 0.25s;z-index:10;background:none;border:none; }
-    .btn-close-modal:hover { color:#38bdf8;transform:rotate(90deg) scale(1.2); }
-    @media (max-width:850px) { .modal-content{flex-direction:column;max-width:500px;} .modal-info{padding:25px;border-left:none;border-top:1px solid rgba(255,255,255,0.05);} }
+    .modal-info { flex:1;padding:32px 36px;display:flex;flex-direction:column;justify-content:flex-start;position:relative;border-left:1px solid rgba(255,255,255,0.05);overflow-y:auto; }
+    .btn-close-modal { position:absolute;top:20px;right:20px;color:#475569;cursor:pointer;transition:all 0.45s cubic-bezier(0.34,1.56,0.64,1);z-index:10;background:none;border:none; }
+    .btn-close-modal:hover { color:#38bdf8;transform:rotate(90deg) scale(1.25); }
+    @media (max-width:850px) { .modal-content{flex-direction:column;max-width:500px;max-height:95vh;} .modal-info{padding:20px;border-left:none;border-top:1px solid rgba(255,255,255,0.05);overflow-y:auto;} }
 
     /* ── ADMIN MODAL ── */
     #admin-modal { z-index: 300; }
-    #admin-modal .modal-content { max-width: 720px; min-height: 500px; flex-direction: column; border-color: rgba(167,139,250,0.4); }
+    #admin-modal .modal-content { max-width: 720px; min-height: 500px; flex-direction: column; border-color: rgba(167,139,250,0.35); }
     .admin-tabs { display:flex;gap:4px;padding:16px 20px 0;border-bottom:1px solid rgba(255,255,255,0.05); }
-    .admin-tab { padding:8px 18px;border-radius:8px 8px 0 0;font-size:11px;font-weight:700;letter-spacing:0.1em;cursor:pointer;background:transparent;border:1px solid transparent;color:#64748b;transition:all 0.2s;font-family:'JetBrains Mono',monospace; }
-    .admin-tab.active { background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:#a78bfa; }
+    .admin-tab { padding:8px 18px;border-radius:8px 8px 0 0;font-size:11px;font-weight:700;letter-spacing:0.1em;cursor:pointer;background:transparent;border:1px solid transparent;color:#475569;transition:all 0.35s cubic-bezier(0.32,0.72,0,1);font-family:'JetBrains Mono',monospace; }
+    .admin-tab.active { background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.28);color:#a78bfa; }
     .admin-tab-content { display:none;padding:20px; }
     .admin-tab-content.active { display:block; }
-    .admin-input { width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;outline:none;transition:border-color 0.2s; }
-    .admin-input:focus { border-color:#a78bfa; }
-    .known-item { display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid rgba(255,255,255,0.05);margin-bottom:6px; }
+    .admin-input { width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.09);border-radius:9px;padding:10px 13px;color:#e2e8f0;font-size:13px;outline:none;transition:all 0.35s cubic-bezier(0.32,0.72,0,1); }
+    .admin-input:focus { border-color:#a78bfa;box-shadow:0 0 0 3px rgba(167,139,250,0.1); }
+    .known-item { display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:rgba(255,255,255,0.025);border-radius:10px;border:1px solid rgba(255,255,255,0.055);margin-bottom:6px;transition:background 0.3s; }
+    .known-item:hover { background:rgba(255,255,255,0.04); }
 
     /* ── TOAST ── */
     #toast-container { position:fixed;top:20px;right:20px;z-index:500;display:flex;flex-direction:column;gap:8px;pointer-events:none; }
-    .toast { padding:12px 18px;border-radius:10px;font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:12px;pointer-events:auto;backdrop-filter:blur(12px);animation:toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1); box-shadow:0 4px 20px rgba(0,0,0,0.5); }
-    @keyframes toastIn { from{opacity:0;transform:translateX(40px);} to{opacity:1;transform:translateX(0);} }
-    .toast-danger { background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.5);color:#fca5a5; }
-    .toast-info   { background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.4);color:#7dd3fc; }
-    .toast-ok     { background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.4);color:#86efac; }
-    .toast button { background:none;border:none;color:inherit;cursor:pointer;opacity:0.6;font-size:14px;line-height:1;padding:0;margin-left:4px; }
+    .toast { padding:12px 18px;border-radius:12px;font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:12px;pointer-events:auto;backdrop-filter:blur(16px);animation:toastIn 0.45s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 8px 32px rgba(0,0,0,0.55); }
+    @keyframes toastIn { from{opacity:0;transform:translateX(50px) scale(0.9);} to{opacity:1;transform:translateX(0) scale(1);} }
+    .toast-danger { background:rgba(239,68,68,0.14);border:1px solid rgba(239,68,68,0.45);color:#fca5a5; }
+    .toast-info   { background:rgba(56,189,248,0.11);border:1px solid rgba(56,189,248,0.38);color:#7dd3fc; }
+    .toast-ok     { background:rgba(74,222,128,0.11);border:1px solid rgba(74,222,128,0.38);color:#86efac; }
+    .toast button { background:none;border:none;color:inherit;cursor:pointer;opacity:0.55;font-size:14px;line-height:1;padding:0;margin-left:4px;transition:opacity 0.2s; }
     .toast button:hover { opacity:1; }
 
     /* ── CATEGORY BADGE ── */
     .cat-badge { font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace; }
-    .cat-rc { background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.4); }
-    .cat-rd { background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.4); }
-    .cat-pc { background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.4); }
-    .cat-pd { background:rgba(251,146,60,0.15);color:#fb923c;border:1px solid rgba(251,146,60,0.4); }
+    .cat-rc { background:rgba(56,189,248,0.14);color:#38bdf8;border:1px solid rgba(56,189,248,0.38); }
+    .cat-rd { background:rgba(248,113,113,0.14);color:#f87171;border:1px solid rgba(248,113,113,0.38); }
+    .cat-pc { background:rgba(74,222,128,0.14);color:#4ade80;border:1px solid rgba(74,222,128,0.38); }
+    .cat-pd { background:rgba(251,146,60,0.14);color:#fb923c;border:1px solid rgba(251,146,60,0.38); }
+
+    /* ── REG TOGGLES ── */
+    .reg-tog { flex:1;padding:8px 4px;border-radius:9px;font-size:10px;font-weight:800;letter-spacing:0.1em;cursor:pointer;transition:all 0.4s cubic-bezier(0.34,1.2,0.64,1);font-family:'JetBrains Mono',monospace;background:transparent;border:1px solid transparent;color:#475569; }
+    .reg-tog.on-amber { background:rgba(251,146,60,0.16);border:1px solid rgba(251,146,60,0.48);color:#fb923c; }
+    .reg-tog.on-cyan  { background:rgba(56,189,248,0.14);border:1px solid rgba(56,189,248,0.42);color:#38bdf8; }
+    .reg-tog.on-purple{ background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.42);color:#a78bfa; }
+    .reg-tog-wrap { display:flex;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:3px;gap:3px; }
+
+    /* ── LOG LIST SCROLLBAR ── */
+    #log-list::-webkit-scrollbar { width: 5px; }
+    #log-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 4px; }
+    #log-list::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.45); border-radius: 4px; }
+    #log-list::-webkit-scrollbar-thumb:hover { background: rgba(56,189,248,0.75); }
 
     /* ── MISC ── */
     @keyframes fadeUp { from{opacity:0;transform:translateY(18px);} to{opacity:1;transform:translateY(0);} }
@@ -155,31 +213,31 @@
   <div class="login-shell">
     <div class="login-inner">
       <div class="login-logo-ring">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       </div>
-      <p class="text-[10px] font-bold tracking-[0.3em] text-slate-500 uppercase mb-1">Sistema de Control</p>
-      <h1 class="text-2xl font-bold text-white font-mono-tech tracking-tight mb-1">Acceso Seguro</h1>
-      <p class="text-xs text-slate-500 mb-8">YOLOv8 · Node.js · MySQL · Socket.io</p>
-      <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Usuario</label>
+      <p class="text-xs font-bold tracking-[0.3em] text-slate-500 uppercase mb-2">Sistema de Control</p>
+      <h1 class="text-4xl font-bold text-white font-mono-tech tracking-tight mb-2">Acceso Seguro</h1>
+      <p class="text-sm text-slate-500 mb-10">YOLOv8 · Node.js · MySQL · Socket.io</p>
+      <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Usuario</label>
       <div class="login-field-shell">
         <div class="login-field-inner">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <input class="login-input" id="inp-user" type="text" placeholder="admin" autocomplete="username"/>
         </div>
       </div>
-      <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block mt-3">Contraseña</label>
+      <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block mt-4">Contraseña</label>
       <div class="login-field-shell">
         <div class="login-field-inner">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           <input class="login-input" id="inp-pass" type="password" placeholder="••••••••" autocomplete="current-password"/>
         </div>
       </div>
       <button class="login-btn" id="btn-login" onclick="doLogin()">Iniciar Sesión</button>
       <div id="login-error">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:6px;vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:6px;vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         Credenciales incorrectas
       </div>
-      <p class="text-[10px] text-slate-600 text-center mt-6 font-mono-tech">KERNEL v3.0 · Socket.io · Acceso Restringido</p>
+      <p class="text-xs text-slate-600 text-center mt-7 font-mono-tech">KERNEL v3.0 · Socket.io · Acceso Restringido</p>
     </div>
   </div>
 </div>
@@ -216,75 +274,107 @@
         </div>
       </div>
       <div id="modal-info-extra" style="display:none;"></div>
-      <button id="modal-marcar-btn" onclick="" style="margin-top:12px;width:100%;padding:10px;background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.4);border-radius:10px;color:#fb923c;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;display:none;">
-        + REGISTRAR PERSONA
+      <button id="modal-marcar-btn" onclick="" style="margin-top:12px;width:100%;padding:10px;background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.4);border-radius:10px;color:#22d3ee;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;display:none;">
+        + NUEVO REGISTRO
       </button>
     </div>
   </div>
 </div>
 
-<!-- ══ REGISTRO RÁPIDO MODAL (auto-abre en desconocido) ══ -->
+<!-- ══ REGISTRO RÁPIDO MODAL ══ -->
 <div id="registro-modal" class="modal-overlay" onclick="cerrarRegistro(event)">
-  <div class="modal-content" onclick="event.stopPropagation()" style="max-width:600px;min-height:auto;flex-direction:row;border-color:rgba(251,146,60,0.5);">
+  <div class="modal-content" onclick="event.stopPropagation()" style="max-width:680px;min-height:auto;flex-direction:row;border-color:rgba(251,146,60,0.5);">
     <!-- Foto -->
     <div class="modal-img-container" style="flex:1;">
       <img id="reg-foto" src="" alt="Captura" style="max-width:100%;max-height:100%;object-fit:contain;">
-      <div style="position:absolute;top:14px;left:14px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.5);border-radius:8px;padding:6px 12px;">
-        <span style="font-size:10px;font-weight:800;color:#fca5a5;letter-spacing:0.2em;font-family:'JetBrains Mono',monospace;">⚠ DESCONOCIDO</span>
+      <div style="position:absolute;top:14px;left:14px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.45);border-radius:8px;padding:6px 12px;">
+        <span style="font-size:9px;font-weight:800;color:#fca5a5;letter-spacing:0.25em;font-family:'JetBrains Mono',monospace;">⚠ NO IDENTIFICADO</span>
       </div>
     </div>
     <!-- Form -->
-    <div class="modal-info" style="flex:1.2;">
+    <div class="modal-info" style="flex:1.3;overflow-y:auto;padding:32px 28px;">
       <button class="btn-close-modal" onclick="cerrarRegistro(event,true)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
-      <p class="text-[10px] font-black tracking-[0.3em] text-amber-400/80 mb-1 uppercase" id="reg-modal-title">Registro de Persona</p>
-      <h3 class="text-xl font-black text-white font-mono-tech mb-1" id="reg-id-title">#0000</h3>
+
+      <p class="text-[9px] font-black tracking-[0.35em] text-amber-400/70 mb-1 uppercase">Nuevo Registro de Acceso</p>
+      <h3 class="text-xl font-black text-white font-mono-tech mb-0.5" id="reg-id-title">#0000</h3>
       <p class="text-[10px] text-slate-500 mb-5" id="reg-info-sub">Cámara · Hora</p>
 
       <input type="hidden" id="reg-tipo-entrada" value="Rostro">
+      <input type="hidden" id="reg-subtipo" value="Alumno">
 
-      <!-- ── CAMPOS ROSTRO ── -->
-      <div id="reg-face-fields" style="display:flex;flex-direction:column;gap:10px;">
+      <!-- ── TOGGLE PRINCIPAL: PERSONA / VEHÍCULO ── -->
+      <div class="reg-tog-wrap mb-3">
+        <button id="tog-persona"  class="reg-tog on-amber" onclick="setRegTipo('Rostro')">◈ &nbsp;PERSONA</button>
+        <button id="tog-vehiculo" class="reg-tog"           onclick="setRegTipo('Placa')">⬡ &nbsp;VEHÍCULO</button>
+      </div>
+
+      <!-- ── SUB-TOGGLE: ALUMNO / DOCENTE-PERSONAL ── -->
+      <div id="reg-subtype-bar" class="reg-tog-wrap mb-4" style="background:rgba(0,0,0,0.2);border-color:rgba(255,255,255,0.04);">
+        <button id="tog-alumno"  class="reg-tog on-cyan"   onclick="setSubTipo('Alumno')">ALUMNO</button>
+        <button id="tog-docente" class="reg-tog"            onclick="setSubTipo('Docente')">DOCENTE / PERSONAL</button>
+      </div>
+
+      <!-- ── CAMPOS ALUMNO ── -->
+      <div id="reg-alumno-fields" style="display:flex;flex-direction:column;gap:9px;">
         <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Nombre *</label>
-          <input id="reg-nombre" class="admin-input" placeholder="Nombre completo de la persona" />
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Nombre Completo *</label>
+          <input id="reg-nombre" class="admin-input" placeholder="Nombre y apellidos" />
         </div>
         <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">O asignar a persona existente</label>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">N° de Control</label>
+          <input id="reg-num-control" class="admin-input" placeholder="Ej: C21010001" style="font-family:'JetBrains Mono',monospace;letter-spacing:0.06em;" />
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">O asignar a alumno existente</label>
           <select id="reg-persona-existente" class="admin-input" onchange="seleccionarExistente(this.value)" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#e2e8f0;">
-            <option value="">— Nueva persona —</option>
+            <option value="">— Nuevo —</option>
           </select>
-        </div>
-        <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Tipo de Carro</label>
-          <input id="reg-tipo-carro" class="admin-input" placeholder="Ej: Sedan, SUV, Pickup..." />
-        </div>
-        <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Placa del Vehículo</label>
-          <input id="reg-placa-vh" class="admin-input" placeholder="Ej: ABC-1234" style="text-transform:uppercase;" />
         </div>
       </div>
 
-      <!-- ── CAMPOS PLACA ── -->
-      <div id="reg-plate-fields" style="display:none;flex-direction:column;gap:10px;">
+      <!-- ── CAMPOS DOCENTE / PERSONAL ── -->
+      <div id="reg-docente-fields" style="display:none;flex-direction:column;gap:9px;">
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Nombre Completo *</label>
+          <input id="reg-nombre-docente" class="admin-input" placeholder="Nombre y apellidos" />
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Cargo / Área</label>
+          <input id="reg-cargo" class="admin-input" placeholder="Ej: Docente TI, Secretaría, Intendencia..." />
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">O asignar a personal existente</label>
+          <select id="reg-personal-existente" class="admin-input" onchange="seleccionarExistenteDocente(this.value)" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#e2e8f0;">
+            <option value="">— Nuevo —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ── CAMPOS VEHÍCULO ── -->
+      <div id="reg-plate-fields" style="display:none;flex-direction:column;gap:9px;">
         <div>
           <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Número de Placa *</label>
           <input id="reg-numero-placa" class="admin-input" placeholder="Ej: ABC-1234" style="text-transform:uppercase;" />
         </div>
         <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Tipo de Carro</label>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Tipo de Vehículo</label>
           <input id="reg-tipo-carro-placa" class="admin-input" placeholder="Ej: Sedan, SUV, Pickup..." />
         </div>
         <div>
           <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Propietario</label>
-          <input id="reg-propietario" class="admin-input" placeholder="Nombre del propietario" />
+          <select id="reg-propietario" class="admin-input" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#e2e8f0;" onchange="togglePropietarioManual(this.value)">
+            <option value="">— Seleccionar propietario —</option>
+            <option value="__otro__">✏ Escribir nombre manualmente</option>
+          </select>
+          <input id="reg-propietario-manual" class="admin-input mt-2" placeholder="Nombre del propietario" style="display:none;" />
         </div>
       </div>
 
-      <div class="flex gap-3 mt-6">
-        <button id="reg-submit-btn" onclick="submitRegistro()" style="flex:1;padding:11px;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.5);border-radius:10px;color:#fb923c;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;">
-          REGISTRAR PERSONA
+      <div class="flex gap-3 mt-5">
+        <button id="reg-submit-btn" onclick="submitRegistro()" style="flex:1;padding:11px;background:rgba(34,211,238,0.12);border:1px solid rgba(34,211,238,0.45);border-radius:10px;color:#22d3ee;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;">
+          ASIGNAR REGISTRO
         </button>
         <button onclick="cerrarRegistro(event,true)" style="padding:11px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#64748b;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;">
           IGNORAR
@@ -416,25 +506,49 @@
 
     <!-- STATS (4 categorías) -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 fade-up fade-up-d2">
-      <div class="glass accent-blue p-5 rounded-xl">
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Rostros Conocidos</p>
-        <p id="m-rc" class="text-4xl font-extrabold text-cyan-400 font-mono-tech mt-2">00</p>
-        <p class="text-[10px] text-slate-500 mt-2">Identificados</p>
+      <!-- Rostros Conocidos -->
+      <div class="stat-shell">
+        <div class="stat-inner accent-blue" style="background:rgba(6,14,32,0.85);">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:#38bdf8;box-shadow:0 0 8px #38bdf8;flex-shrink:0;"></div>
+            <p style="font-size:9px;font-weight:800;color:rgba(148,163,184,0.7);letter-spacing:0.18em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">ROSTROS CONOCIDOS</p>
+          </div>
+          <p id="m-rc" class="stat-num" style="color:#38bdf8;">00</p>
+          <p style="font-size:10px;color:rgba(100,116,139,0.6);margin-top:2px;">Personas identificadas</p>
+        </div>
       </div>
-      <div class="glass accent-red p-5 rounded-xl">
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Rostros Desconocidos</p>
-        <p id="m-rd" class="text-4xl font-extrabold text-red-400 font-mono-tech mt-2">00</p>
-        <p class="text-[10px] text-slate-500 mt-2">Sin identificar</p>
+      <!-- Rostros Desconocidos -->
+      <div class="stat-shell">
+        <div class="stat-inner accent-red" style="background:rgba(12,6,14,0.85);">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:#f87171;box-shadow:0 0 8px #f87171;flex-shrink:0;"></div>
+            <p style="font-size:9px;font-weight:800;color:rgba(148,163,184,0.7);letter-spacing:0.18em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">ROSTROS DESCONOCIDOS</p>
+          </div>
+          <p id="m-rd" class="stat-num" style="color:#f87171;">00</p>
+          <p style="font-size:10px;color:rgba(100,116,139,0.6);margin-top:2px;">Sin identificar</p>
+        </div>
       </div>
-      <div class="glass accent-green p-5 rounded-xl">
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Placas Conocidas</p>
-        <p id="m-pc" class="text-4xl font-extrabold text-green-400 font-mono-tech mt-2">00</p>
-        <p class="text-[10px] text-slate-500 mt-2">Registradas</p>
+      <!-- Placas Conocidas -->
+      <div class="stat-shell">
+        <div class="stat-inner accent-green" style="background:rgba(4,12,8,0.85);">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;flex-shrink:0;"></div>
+            <p style="font-size:9px;font-weight:800;color:rgba(148,163,184,0.7);letter-spacing:0.18em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">PLACAS CONOCIDAS</p>
+          </div>
+          <p id="m-pc" class="stat-num" style="color:#4ade80;">00</p>
+          <p style="font-size:10px;color:rgba(100,116,139,0.6);margin-top:2px;">Vehículos registrados</p>
+        </div>
       </div>
-      <div class="glass accent-amber p-5 rounded-xl">
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Placas Desconocidas</p>
-        <p id="m-pd" class="text-4xl font-extrabold text-amber-400 font-mono-tech mt-2">00</p>
-        <p class="text-[10px] text-slate-500 mt-2">Sin registrar</p>
+      <!-- Placas Desconocidas -->
+      <div class="stat-shell">
+        <div class="stat-inner accent-amber" style="background:rgba(14,10,4,0.85);">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:#fb923c;box-shadow:0 0 8px #fb923c;flex-shrink:0;"></div>
+            <p style="font-size:9px;font-weight:800;color:rgba(148,163,184,0.7);letter-spacing:0.18em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">PLACAS DESCONOCIDAS</p>
+          </div>
+          <p id="m-pd" class="stat-num" style="color:#fb923c;">00</p>
+          <p style="font-size:10px;color:rgba(100,116,139,0.6);margin-top:2px;">Sin registrar</p>
+        </div>
       </div>
     </div>
 
@@ -451,12 +565,12 @@
         <div id="capture-grid" class="grid grid-cols-3 gap-3"></div>
       </div>
 
-      <div class="glass rounded-xl p-6">
-        <div class="flex items-center gap-3 mb-5 pb-3" style="border-bottom:1px solid rgba(255,255,255,.05)">
+      <div class="glass rounded-xl p-6 flex flex-col" style="max-height:520px;overflow:hidden;">
+        <div class="flex items-center gap-3 mb-5 pb-3 flex-shrink-0" style="border-bottom:1px solid rgba(255,255,255,.05)">
           <span style="width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;"></span>
           <p class="text-[11px] font-bold text-slate-300 tracking-[0.15em] uppercase">Historial de Acceso</p>
         </div>
-        <div id="log-list" class="flex flex-col gap-2 overflow-y-auto pr-1" style="max-height:330px">
+        <div id="log-list" class="flex flex-col gap-2 pr-2" style="flex:1;overflow-y:scroll;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(56,189,248,0.45) rgba(255,255,255,0.04);">
           <div class="flex flex-col items-center justify-center h-full opacity-50 py-10">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="mb-3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             <p class="text-xs text-slate-400">Esperando actividad...</p>
@@ -537,16 +651,22 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="text-[10px] font-bold text-slate-500 mb-1.5 block uppercase tracking-widest">Hora Inicial</label>
-              <input type="time" id="f-hora-ini" onchange="actualizarDatos()" class="filtro-input font-mono-tech w-full rounded-md p-2.5 text-xs">
+              <input type="time" id="f-hora-ini" onchange="actualizarDatosDebounced()" class="filtro-input font-mono-tech w-full rounded-md p-2.5 text-xs">
             </div>
             <div>
               <label class="text-[10px] font-bold text-slate-500 mb-1.5 block uppercase tracking-widest">Hora Final</label>
-              <input type="time" id="f-hora-fin" onchange="actualizarDatos()" class="filtro-input font-mono-tech w-full rounded-md p-2.5 text-xs">
+              <input type="time" id="f-hora-fin" onchange="actualizarDatosDebounced()" class="filtro-input font-mono-tech w-full rounded-md p-2.5 text-xs">
             </div>
           </div>
-          <div>
-            <label class="text-[10px] font-bold text-slate-500 mb-1.5 block uppercase tracking-widest">Día Exacto</label>
-            <input type="date" id="f-fecha" onchange="actualizarDatos()" class="filtro-input font-mono-tech w-full rounded-md p-2.5 text-xs mb-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[10px] font-bold text-slate-500 mb-1.5 block uppercase tracking-widest">Desde</label>
+              <input type="date" id="f-desde" onchange="actualizarDatosDebounced()" class="filtro-input font-mono-tech w-full rounded-md p-2.5 text-xs mb-3">
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-slate-500 mb-1.5 block uppercase tracking-widest">Hasta</label>
+              <input type="date" id="f-hasta" onchange="actualizarDatosDebounced()" class="filtro-input font-mono-tech w-full rounded-md p-2.5 text-xs mb-3">
+            </div>
           </div>
           <button onclick="exportarCSV()" class="btn-action w-full flex items-center justify-center gap-2 bg-green-900/40 hover:bg-green-600/50 border border-green-500/50 text-green-400 hover:text-white text-xs font-bold py-2.5 rounded-lg uppercase tracking-widest">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -655,7 +775,7 @@
     document.getElementById('view-login').style.display = 'none';
     document.getElementById('view-dashboard').style.display = 'block';
     initBars(); initCamera(); initSocket();
-    actualizarDatos(); cargarStats();
+    actualizarDatos(); cargarStats(); cargarActividadHoy();
   }
 
   document.addEventListener('keydown', e => {
@@ -687,13 +807,17 @@
       triggerAlerta(data);
       cargarStats();
       actualizarDatos();
-      // Auto-abrir formulario de registro si es desconocido (rostro o placa)
+      // Encolar registro si es desconocido — dedup por tracking_id
       if (data.categoria && data.categoria.includes('Desconocido')) {
-        abrirRegistroRapido(data);
+        encolarRegistro(data);
       }
     });
 
     socket.on('deteccion_actualizada', (data) => {
+      // Limpiar de la cola cualquier item con mismo tracking_id (ya registrado masivamente)
+      if (data.tracking_id != null) {
+        registroQueue = registroQueue.filter(d => d.tracking_id !== data.tracking_id);
+      }
       logTerminal(`ID ${data.id} → ${data.categoria}`, 'ok');
       cargarStats();
       actualizarDatos();
@@ -774,11 +898,46 @@
   // ═══════ CHART ═══════
   function initBars() {
     const c = document.getElementById('chart-bars'); c.innerHTML = '';
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 24; i++) {
       const w = document.createElement('div'); w.className = 'bar-wrapper';
-      w.innerHTML = `<div class="bar-tooltip">0</div><div class="bar" style="height:5%"></div>`;
+      w.innerHTML = `<div class="bar-tooltip">0</div><div class="bar" style="height:3%"></div>`;
       c.appendChild(w);
     }
+  }
+
+  function renderActividad(data) {
+    const max  = Math.max(...data, 1);
+    const hAct = new Date().getHours();
+    const wrappers = document.getElementById('chart-bars').getElementsByClassName('bar-wrapper');
+    for (let i = 0; i < 24; i++) {
+      const cnt  = data[i] || 0;
+      const bar  = wrappers[i]?.querySelector('.bar');
+      const tip  = wrappers[i]?.querySelector('.bar-tooltip');
+      if (!bar) continue;
+      bar.style.height = (cnt === 0 ? 3 : Math.max((cnt / max) * 100, 8)) + '%';
+      if (tip) tip.textContent = cnt;
+      if (i === hAct) {
+        bar.style.borderTopColor = '#fb923c';
+        bar.style.background = 'linear-gradient(180deg,rgba(251,146,60,0.9) 0%,rgba(251,146,60,0.08) 100%)';
+        bar.style.boxShadow = '0 -3px 12px rgba(251,146,60,0.4)';
+      } else if (!cnt) {
+        bar.style.borderTopColor = 'rgba(56,189,248,0.12)';
+        bar.style.background = 'rgba(56,189,248,0.02)';
+        bar.style.boxShadow = 'none';
+      } else {
+        bar.style.borderTopColor = '#38bdf8';
+        bar.style.background = 'linear-gradient(180deg,rgba(56,189,248,0.8) 0%,rgba(56,189,248,0.05) 100%)';
+        bar.style.boxShadow = '0 -2px 10px rgba(56,189,248,0.18)';
+      }
+    }
+  }
+
+  async function cargarActividadHoy() {
+    if (_hayFiltro()) return; // actualizarDatos() ya renderiza la gráfica filtrada
+    try {
+      const data = await fetch('/api/actividad-hoy').then(r => r.json());
+      renderActividad(data);
+    } catch {}
   }
 
   // ═══════ CLOCK ═══════
@@ -797,13 +956,36 @@
   setInterval(actualizarReloj, 1000); actualizarReloj();
 
   // ═══════ STATS ═══════
+  function animateNumber(el, target) {
+    const start = parseInt(el.textContent) || 0;
+    if (start === target) return;
+    const dur = 500, fps = 16, steps = Math.ceil(dur / fps);
+    let n = 0;
+    const iv = setInterval(() => {
+      n++;
+      const prog = n / steps;
+      const ease = 1 - Math.pow(1 - prog, 3);
+      const cur  = Math.round(start + (target - start) * ease);
+      el.textContent = String(cur).padStart(2, '0');
+      if (n >= steps) { el.textContent = String(target).padStart(2,'0'); clearInterval(iv); }
+    }, fps);
+  }
+
+  function _hayFiltro() {
+    return ['f-categoria','f-modulo','f-desde','f-hasta','f-hora-ini','f-hora-fin'].some(id => {
+      const el = document.getElementById(id);
+      return el && el.value && el.value !== 'Todos';
+    });
+  }
+
   async function cargarStats() {
+    if (_hayFiltro()) return; // actualizarDatos() maneja stats filtradas
     try {
       const stats = await fetch('/stats').then(r => r.json());
-      document.getElementById('m-rc').textContent = String(stats.Rostro_Conocido    || 0).padStart(2,'0');
-      document.getElementById('m-rd').textContent = String(stats.Rostro_Desconocido || 0).padStart(2,'0');
-      document.getElementById('m-pc').textContent = String(stats.Placa_Conocida     || 0).padStart(2,'0');
-      document.getElementById('m-pd').textContent = String(stats.Placa_Desconocida  || 0).padStart(2,'0');
+      animateNumber(document.getElementById('m-rc'), stats.Rostro_Conocido    || 0);
+      animateNumber(document.getElementById('m-rd'), stats.Rostro_Desconocido || 0);
+      animateNumber(document.getElementById('m-pc'), stats.Placa_Conocida     || 0);
+      animateNumber(document.getElementById('m-pd'), stats.Placa_Desconocida  || 0);
     } catch {}
   }
 
@@ -825,9 +1007,13 @@
 
   // ═══════ FILTERS ═══════
   let datosGlobalesFiltrados = [];
+  let _lastGridHash = '';
+  let _lastListHash = '';
+  let _debTimer;
+  function actualizarDatosDebounced() { clearTimeout(_debTimer); _debTimer = setTimeout(actualizarDatos, 260); }
 
   function limpiarFiltros() {
-    ['f-modulo','f-categoria','f-fecha','f-hora-ini','f-hora-fin'].forEach(id => {
+    ['f-modulo','f-categoria','f-hora-ini','f-hora-fin','f-desde','f-hasta'].forEach(id => {
       const el = document.getElementById(id);
       if (el.tagName === 'SELECT') el.value = 'Todos'; else el.value = '';
     });
@@ -835,15 +1021,24 @@
   }
 
   function exportarCSV() {
-    if (!datosGlobalesFiltrados.length) return alert('No hay datos para exportar.');
-    let csv = 'data:text/csv;charset=utf-8,ID,Tipo,Categoría,Módulo,Fecha,Hora\n';
-    datosGlobalesFiltrados.forEach(r => {
-      const f = new Date(r.fecha_registro);
-      csv += `${r.id},${r.tipo_entrada},${r.categoria || ''},${r.modulo},${f.toLocaleDateString('es-MX')},${f.toLocaleTimeString('es-MX')}\n`;
-    });
-    const a = document.createElement('a'); a.href = encodeURI(csv);
+    const params = new URLSearchParams();
+    const cat     = document.getElementById('f-categoria').value;
+    const mod     = document.getElementById('f-modulo').value;
+    const desde   = document.getElementById('f-desde').value;
+    const hasta   = document.getElementById('f-hasta').value;
+    const horaIni = document.getElementById('f-hora-ini').value;
+    const horaFin = document.getElementById('f-hora-fin').value;
+    if (cat     && cat     !== 'Todos') params.set('categoria', cat);
+    if (mod     && mod     !== 'Todos') params.set('modulo',    mod);
+    if (desde)   params.set('desde',    desde);
+    if (hasta)   params.set('hasta',    hasta);
+    if (horaIni) params.set('hora_ini', horaIni);
+    if (horaFin) params.set('hora_fin', horaFin);
+    const a = document.createElement('a');
+    a.href = `/api/exportar-csv?${params.toString()}`;
     a.download = `Reporte_${new Date().toISOString().slice(0,10)}.csv`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    mostrarToast('Generando CSV…', 'info');
   }
 
   // ═══════ MODAL PHOTO ═══════
@@ -861,37 +1056,104 @@
 
     // Info adicional de persona conocida
     const infoExtra = document.getElementById('modal-info-extra');
-    if (data.nombre) {
+
+    function renderInfoPersona(d) {
+      if (!d.nombre) { infoExtra.innerHTML = ''; infoExtra.style.display = 'none'; return; }
+      const tipoBadgeColor = d.tipo_persona === 'Docente' ? '#a78bfa' : '#38bdf8';
+      const tipoBadgeBg    = d.tipo_persona === 'Docente' ? 'rgba(167,139,250,0.12)' : 'rgba(56,189,248,0.12)';
       infoExtra.innerHTML = `
-        <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:12px;padding:14px 16px;margin-top:10px;">
-          <p style="font-size:9px;color:#38bdf8;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:10px;">Persona Identificada</p>
+        <div style="background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.18);border-radius:12px;padding:14px 16px;margin-top:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <p style="font-size:9px;color:#38bdf8;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;margin:0;">Persona Identificada</p>
+            ${d.tipo_persona ? `<span style="font-size:8px;font-weight:800;padding:2px 8px;border-radius:5px;background:${tipoBadgeBg};color:${tipoBadgeColor};border:1px solid ${tipoBadgeColor}44;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;">${d.tipo_persona.toUpperCase()}</span>` : ''}
+          </div>
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <span style="font-size:10px;color:#475569;font-weight:600;">Nombre</span>
-              <span style="font-size:13px;color:#e2e8f0;font-weight:700;font-family:'JetBrains Mono',monospace;">${data.nombre}</span>
+              <span style="font-size:13px;color:#e2e8f0;font-weight:700;font-family:'JetBrains Mono',monospace;">${d.nombre}</span>
             </div>
-            ${data.tipo_carro ? `<div style="display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-size:10px;color:#475569;font-weight:600;">Vehículo</span>
-              <span style="font-size:12px;color:#94a3b8;font-weight:600;">${data.tipo_carro}</span>
+            ${d.num_control ? `<div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:10px;color:#475569;font-weight:600;">N° Control</span>
+              <span style="font-size:12px;color:#38bdf8;font-weight:800;font-family:'JetBrains Mono',monospace;">${d.num_control}</span>
             </div>` : ''}
-            ${data.placa_carro ? `<div style="display:flex;justify-content:space-between;align-items:center;">
+            ${d.cargo ? `<div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:10px;color:#475569;font-weight:600;">Cargo</span>
+              <span style="font-size:12px;color:#a78bfa;font-weight:600;">${d.cargo}</span>
+            </div>` : ''}
+            ${d.placa_carro ? `<div style="display:flex;justify-content:space-between;align-items:center;">
               <span style="font-size:10px;color:#475569;font-weight:600;">Placa</span>
-              <span style="font-size:12px;color:#4ade80;font-weight:800;font-family:'JetBrains Mono',monospace;">${data.placa_carro}</span>
+              <span style="font-size:12px;color:#4ade80;font-weight:800;font-family:'JetBrains Mono',monospace;">${d.placa_carro}</span>
             </div>` : ''}
           </div>
         </div>`;
       infoExtra.style.display = 'block';
+    }
+
+    function renderInfoPlaca(d) {
+      if (!d.numero_placa) { infoExtra.innerHTML = ''; infoExtra.style.display = 'none'; return; }
+      infoExtra.innerHTML = `
+        <div style="background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.18);border-radius:12px;padding:14px 16px;margin-top:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <p style="font-size:9px;color:#4ade80;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;margin:0;">Vehículo Registrado</p>
+            <span style="font-size:8px;font-weight:800;padding:2px 8px;border-radius:5px;background:rgba(74,222,128,0.12);color:#4ade80;border:1px solid rgba(74,222,128,0.44);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;">PLACA</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:10px;color:#475569;font-weight:600;">Número de Placa</span>
+              <span style="font-size:16px;color:#4ade80;font-weight:900;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;">${d.numero_placa}</span>
+            </div>
+            ${d.propietario ? `<div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:10px;color:#475569;font-weight:600;">Propietario</span>
+              <span style="font-size:13px;color:#e2e8f0;font-weight:700;font-family:'JetBrains Mono',monospace;">${d.propietario}</span>
+            </div>` : ''}
+            ${d.tipo_carro_placa ? `<div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:10px;color:#475569;font-weight:600;">Tipo</span>
+              <span style="font-size:12px;color:#94a3b8;font-weight:600;">${d.tipo_carro_placa}</span>
+            </div>` : ''}
+          </div>
+        </div>`;
+      infoExtra.style.display = 'block';
+    }
+
+    const esRC = data.categoria === 'Rostro_Conocido';
+    const esPC = data.categoria === 'Placa_Conocida';
+    const esConocido = esRC || esPC;
+
+    if (esPC) {
+      if (data.numero_placa) {
+        renderInfoPlaca(data);
+      } else {
+        infoExtra.innerHTML = `<div style="margin-top:10px;padding:14px 16px;border:1px solid rgba(74,222,128,0.12);border-radius:12px;color:#475569;font-size:11px;font-family:'JetBrains Mono',monospace;">Cargando datos...</div>`;
+        infoExtra.style.display = 'block';
+        fetch(`/registro/${data.id}`)
+          .then(r => r.json())
+          .then(reg => renderInfoPlaca(reg))
+          .catch(() => { infoExtra.innerHTML = ''; infoExtra.style.display = 'none'; });
+      }
+    } else if (esRC) {
+      if (data.nombre) {
+        renderInfoPersona(data);
+      } else {
+        infoExtra.innerHTML = `<div style="margin-top:10px;padding:14px 16px;border:1px solid rgba(56,189,248,0.12);border-radius:12px;color:#475569;font-size:11px;font-family:'JetBrains Mono',monospace;">Cargando datos...</div>`;
+        infoExtra.style.display = 'block';
+        fetch(`/registro/${data.id}`)
+          .then(r => r.json())
+          .then(reg => renderInfoPersona(reg))
+          .catch(() => { infoExtra.innerHTML = ''; infoExtra.style.display = 'none'; });
+      }
     } else {
       infoExtra.innerHTML = '';
       infoExtra.style.display = 'none';
     }
 
     const btn = document.getElementById('modal-marcar-btn');
-    if (data.categoria && data.categoria.includes('Desconocido')) {
+    if (esConocido) {
+      btn.style.display = 'none';
+    } else {
       btn.style.display = 'block';
-      btn.textContent = data.tipo === 'Placa' ? '+ REGISTRAR VEHÍCULO' : '+ REGISTRAR PERSONA';
+      btn.textContent = '+ NUEVO REGISTRO';
       btn.onclick = () => { cerrarModal(null,true); abrirRegistroRapido({...data, foto: data.foto_nombre}); };
-    } else { btn.style.display = 'none'; }
+    }
     document.getElementById('image-modal').classList.add('active');
   }
 
@@ -923,22 +1185,119 @@
   }
 
   // ═══════ REGISTRO RÁPIDO ═══════
-  let registroActivoId = null;
+  let registroActivoId   = null;
+  let registroActivoData = null;   // data del item actual en modal
+  let registroQueue      = [];     // cola de desconocidos pendientes
+
+  // Agrega a la cola, ignorando duplicados por tracking_id
+  function encolarRegistro(data) {
+    const tid = data.tracking_id ?? null;
+    if (tid != null) {
+      if (registroActivoData && registroActivoData.tracking_id === tid) return; // ya en pantalla
+      if (registroQueue.some(d => d.tracking_id === tid)) return;               // ya en cola
+    }
+    registroQueue.push(data);
+    if (!registroActivoData) siguienteRegistro();
+  }
+
+  function siguienteRegistro() {
+    if (registroQueue.length === 0) { registroActivoData = null; return; }
+    const data = registroQueue.shift();
+    registroActivoData = data;
+    abrirRegistroRapido(data);
+  }
+
+  function setRegTipo(tipo) {
+    document.getElementById('reg-tipo-entrada').value = tipo;
+    const esPersona = tipo === 'Rostro';
+    document.getElementById('tog-persona').className  = esPersona ? 'reg-tog on-amber' : 'reg-tog';
+    document.getElementById('tog-vehiculo').className = !esPersona ? 'reg-tog on-amber' : 'reg-tog';
+    document.getElementById('reg-subtype-bar').style.display = esPersona ? 'flex' : 'none';
+    document.getElementById('reg-plate-fields').style.display = !esPersona ? 'flex' : 'none';
+    if (esPersona) {
+      const sub = document.getElementById('reg-subtipo').value;
+      document.getElementById('reg-alumno-fields').style.display  = sub === 'Alumno'  ? 'flex' : 'none';
+      document.getElementById('reg-docente-fields').style.display = sub === 'Docente' ? 'flex' : 'none';
+    } else {
+      document.getElementById('reg-alumno-fields').style.display  = 'none';
+      document.getElementById('reg-docente-fields').style.display = 'none';
+      cargarPropietarios();
+    }
+    document.getElementById('reg-submit-btn').textContent = 'ASIGNAR REGISTRO';
+  }
+
+  function setSubTipo(sub) {
+    document.getElementById('reg-subtipo').value = sub;
+    document.getElementById('tog-alumno').className  = sub === 'Alumno'  ? 'reg-tog on-cyan'   : 'reg-tog';
+    document.getElementById('tog-docente').className = sub === 'Docente' ? 'reg-tog on-purple'  : 'reg-tog';
+    document.getElementById('reg-alumno-fields').style.display  = sub === 'Alumno'  ? 'flex' : 'none';
+    document.getElementById('reg-docente-fields').style.display = sub === 'Docente' ? 'flex' : 'none';
+    if (sub === 'Docente') cargarPersonalExistente();
+    else cargarPersonasExistentes();
+  }
 
   async function cargarPersonasExistentes() {
     try {
       const personas = await fetch('/conocidos/rostros').then(r => r.json());
       const sel = document.getElementById('reg-persona-existente');
-      sel.innerHTML = '<option value="">— Nueva persona —</option>';
+      sel.innerHTML = '<option value="">— Nuevo —</option>';
+      const vistos = new Set();
       personas.forEach(p => {
+        if (p.tipo_persona && p.tipo_persona !== 'Alumno') return;
+        if (vistos.has(p.nombre)) return;
+        vistos.add(p.nombre);
         const opt = document.createElement('option');
         opt.value = p.nombre;
-        opt.dataset.tipoCarro = p.tipo_carro || '';
-        opt.dataset.placa = p.placa || '';
-        opt.textContent = `${p.nombre}${p.placa ? ' · ' + p.placa : ''}`;
+        opt.dataset.numControl = p.num_control || '';
+        opt.textContent = `${p.nombre}${p.num_control ? ' · ' + p.num_control : ''}`;
         sel.appendChild(opt);
       });
     } catch {}
+  }
+
+  async function cargarPersonalExistente() {
+    try {
+      const personas = await fetch('/conocidos/rostros').then(r => r.json());
+      const sel = document.getElementById('reg-personal-existente');
+      sel.innerHTML = '<option value="">— Nuevo —</option>';
+      const vistos = new Set();
+      personas.forEach(p => {
+        if (p.tipo_persona !== 'Docente') return;
+        if (vistos.has(p.nombre)) return;
+        vistos.add(p.nombre);
+        const opt = document.createElement('option');
+        opt.value = p.nombre;
+        opt.dataset.cargo = p.cargo || '';
+        opt.textContent = `${p.nombre}${p.cargo ? ' · ' + p.cargo : ''}`;
+        sel.appendChild(opt);
+      });
+    } catch {}
+  }
+
+  async function cargarPropietarios() {
+    try {
+      const personas = await fetch('/conocidos/rostros').then(r => r.json());
+      const sel = document.getElementById('reg-propietario');
+      sel.innerHTML = '<option value="">— Seleccionar propietario —</option>';
+      const vistos = new Set();
+      personas.forEach(p => {
+        if (!p.nombre) return;
+        if (vistos.has(p.nombre)) return;
+        vistos.add(p.nombre);
+        const opt = document.createElement('option');
+        opt.value = p.nombre;
+        opt.textContent = p.nombre + (p.tipo_persona ? ' · ' + p.tipo_persona : '');
+        sel.appendChild(opt);
+      });
+      const manual = document.createElement('option');
+      manual.value = '__otro__';
+      manual.textContent = '✏ Escribir nombre manualmente';
+      sel.appendChild(manual);
+    } catch {}
+  }
+
+  function togglePropietarioManual(val) {
+    document.getElementById('reg-propietario-manual').style.display = val === '__otro__' ? 'block' : 'none';
   }
 
   function seleccionarExistente(nombre) {
@@ -947,55 +1306,63 @@
     if (!nombre) {
       document.getElementById('reg-nombre').value = '';
       document.getElementById('reg-nombre').disabled = false;
-      document.getElementById('reg-tipo-carro').value = '';
-      document.getElementById('reg-placa-vh').value = '';
+      document.getElementById('reg-num-control').value = '';
     } else {
       document.getElementById('reg-nombre').value = nombre;
       document.getElementById('reg-nombre').disabled = true;
-      document.getElementById('reg-tipo-carro').value = opt.dataset.tipoCarro || '';
-      document.getElementById('reg-placa-vh').value = opt.dataset.placa || '';
+      document.getElementById('reg-num-control').value = opt.dataset.numControl || '';
+    }
+  }
+
+  function seleccionarExistenteDocente(nombre) {
+    const sel = document.getElementById('reg-personal-existente');
+    const opt = sel.options[sel.selectedIndex];
+    if (!nombre) {
+      document.getElementById('reg-nombre-docente').value = '';
+      document.getElementById('reg-nombre-docente').disabled = false;
+      document.getElementById('reg-cargo').value = '';
+    } else {
+      document.getElementById('reg-nombre-docente').value = nombre;
+      document.getElementById('reg-nombre-docente').disabled = true;
+      document.getElementById('reg-cargo').value = opt.dataset.cargo || '';
     }
   }
 
   function abrirRegistroRapido(data) {
-    registroActivoId = data.id;
-    const fObj = new Date(data.fecha_registro);
-    const hora = fObj.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    registroActivoId   = data.id;
+    registroActivoData = data;
+    const fObj  = new Date(data.fecha_registro);
+    const hora  = fObj.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
     const fecha = fObj.toLocaleDateString('es-MX', {day:'2-digit', month:'long', year:'numeric'});
-    const tipo = data.tipo_entrada || 'Rostro';
+    const tipo  = data.tipo_entrada || 'Rostro';
 
-    document.getElementById('reg-id-title').textContent = '#' + String(data.id).padStart(4,'0');
-    document.getElementById('reg-info-sub').textContent = `${data.modulo} · ${fecha} · ${hora}`;
-    document.getElementById('reg-tipo-entrada').value = tipo;
+    document.getElementById('reg-id-title').textContent  = '#' + String(data.id).padStart(4,'0');
+    document.getElementById('reg-info-sub').textContent  = `${data.modulo} · ${fecha} · ${hora}`;
 
-    if (tipo === 'Placa') {
-      document.getElementById('reg-modal-title').textContent = 'Registro de Vehículo';
-      document.getElementById('reg-submit-btn').textContent = 'REGISTRAR VEHÍCULO';
-      document.getElementById('reg-face-fields').style.display = 'none';
-      document.getElementById('reg-plate-fields').style.display = 'flex';
-      document.getElementById('reg-numero-placa').value = '';
-      document.getElementById('reg-tipo-carro-placa').value = '';
-      document.getElementById('reg-propietario').value = '';
-    } else {
-      document.getElementById('reg-modal-title').textContent = 'Registro de Persona';
-      document.getElementById('reg-submit-btn').textContent = 'REGISTRAR PERSONA';
-      document.getElementById('reg-face-fields').style.display = 'flex';
-      document.getElementById('reg-plate-fields').style.display = 'none';
-      document.getElementById('reg-nombre').value = '';
-      document.getElementById('reg-nombre').disabled = false;
-      document.getElementById('reg-nombre').style.borderColor = '';
-      document.getElementById('reg-tipo-carro').value = '';
-      document.getElementById('reg-placa-vh').value = '';
-      cargarPersonasExistentes();
-    }
+    // Reset campos
+    document.getElementById('reg-nombre').value = '';
+    document.getElementById('reg-nombre').disabled = false;
+    document.getElementById('reg-nombre').style.borderColor = '';
+    document.getElementById('reg-num-control').value = '';
+    document.getElementById('reg-nombre-docente').value = '';
+    document.getElementById('reg-nombre-docente').disabled = false;
+    document.getElementById('reg-cargo').value = '';
+    document.getElementById('reg-numero-placa').value = '';
+    document.getElementById('reg-tipo-carro-placa').value = '';
+    document.getElementById('reg-propietario').value = '';
+    document.getElementById('reg-propietario-manual').value = '';
+    document.getElementById('reg-propietario-manual').style.display = 'none';
+    document.getElementById('reg-subtipo').value = 'Alumno';
+    document.getElementById('tog-alumno').className  = 'reg-tog on-cyan';
+    document.getElementById('tog-docente').className = 'reg-tog';
 
+    // Foto
     const foto = document.getElementById('reg-foto');
-    if (data.foto) {
-      foto.src = `/fotos/${data.foto}?t=${Date.now()}`;
-      foto.style.display = 'block';
-    } else {
-      foto.style.display = 'none';
-    }
+    if (data.foto) { foto.src = `/fotos/${data.foto}?t=${Date.now()}`; foto.style.display = 'block'; }
+    else            { foto.style.display = 'none'; }
+
+    setRegTipo(tipo);
+    if (tipo === 'Rostro') cargarPersonasExistentes();
 
     document.getElementById('registro-modal').classList.add('active');
     setTimeout(() => {
@@ -1008,12 +1375,17 @@
     if (force || e.target.id === 'registro-modal') {
       document.getElementById('registro-modal').classList.remove('active');
       document.getElementById('reg-nombre').disabled = false;
-      registroActivoId = null;
+      document.getElementById('reg-nombre-docente').disabled = false;
+      registroActivoId   = null;
+      registroActivoData = null;
+      // Avanzar cola con delay para que cierre la animación primero
+      setTimeout(siguienteRegistro, 450);
     }
   }
 
   async function submitRegistro() {
-    const tipo = document.getElementById('reg-tipo-entrada').value;
+    const tipo    = document.getElementById('reg-tipo-entrada').value;
+    const subtipo = document.getElementById('reg-subtipo').value;
 
     if (tipo === 'Placa') {
       const numero_placa = document.getElementById('reg-numero-placa').value.trim().toUpperCase();
@@ -1024,40 +1396,51 @@
       }
       document.getElementById('reg-numero-placa').style.borderColor = '';
       const tipo_carro  = document.getElementById('reg-tipo-carro-placa').value.trim();
-      const propietario = document.getElementById('reg-propietario').value.trim();
+      const selProp     = document.getElementById('reg-propietario').value;
+      const propietario = selProp === '__otro__'
+        ? document.getElementById('reg-propietario-manual').value.trim()
+        : selProp.trim();
       try {
         await fetch(`/marcar-conocido/${registroActivoId}`, {
-          method: 'PUT',
-          headers: {'Content-Type': 'application/json'},
+          method: 'PUT', headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ numero_placa, tipo_carro: tipo_carro || null, propietario: propietario || null })
         });
-        mostrarToast(`Placa "${numero_placa}" registrada`, 'ok');
-        cerrarRegistro(null, true);
-        cargarStats();
-        actualizarDatos();
-      } catch { mostrarToast('Error al registrar placa', 'danger'); }
+        mostrarToast(`Vehículo "${numero_placa}" registrado`, 'ok');
+        cerrarRegistro(null, true); cargarStats(); actualizarDatos();
+      } catch { mostrarToast('Error al registrar vehículo', 'danger'); }
 
     } else {
-      const nombre = document.getElementById('reg-nombre').value.trim();
-      if (!nombre) {
-        document.getElementById('reg-nombre').style.borderColor = '#f87171';
-        document.getElementById('reg-nombre').focus();
-        return mostrarToast('Nombre requerido', 'danger');
+      let nombre, tipo_persona, num_control = null, cargo = null;
+      if (subtipo === 'Alumno') {
+        nombre       = document.getElementById('reg-nombre').value.trim();
+        tipo_persona = 'Alumno';
+        num_control  = document.getElementById('reg-num-control').value.trim() || null;
+        if (!nombre) {
+          document.getElementById('reg-nombre').style.borderColor = '#f87171';
+          document.getElementById('reg-nombre').focus();
+          return mostrarToast('Nombre requerido', 'danger');
+        }
+        document.getElementById('reg-nombre').style.borderColor = '';
+        document.getElementById('reg-nombre').disabled = false;
+      } else {
+        nombre       = document.getElementById('reg-nombre-docente').value.trim();
+        tipo_persona = 'Docente';
+        cargo        = document.getElementById('reg-cargo').value.trim() || null;
+        if (!nombre) {
+          document.getElementById('reg-nombre-docente').style.borderColor = '#f87171';
+          document.getElementById('reg-nombre-docente').focus();
+          return mostrarToast('Nombre requerido', 'danger');
+        }
+        document.getElementById('reg-nombre-docente').style.borderColor = '';
+        document.getElementById('reg-nombre-docente').disabled = false;
       }
-      document.getElementById('reg-nombre').style.borderColor = '';
-      document.getElementById('reg-nombre').disabled = false;
-      const tipo_carro = document.getElementById('reg-tipo-carro').value.trim();
-      const placa      = document.getElementById('reg-placa-vh').value.trim().toUpperCase();
       try {
         await fetch(`/marcar-conocido/${registroActivoId}`, {
-          method: 'PUT',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ nombre, tipo_carro: tipo_carro || null, placa: placa || null })
+          method: 'PUT', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ nombre, tipo_persona, num_control, cargo })
         });
-        mostrarToast(`"${nombre}" registrado como Rostro Conocido`, 'ok');
-        cerrarRegistro(null, true);
-        cargarStats();
-        actualizarDatos();
+        mostrarToast(`"${nombre}" (${tipo_persona}) registrado`, 'ok');
+        cerrarRegistro(null, true); cargarStats(); actualizarDatos();
       } catch { mostrarToast('Error al registrar', 'danger'); }
     }
   }
@@ -1176,80 +1559,66 @@
   // ═══════ DATA POLLING ═══════
   async function actualizarDatos() {
     try {
-      const res = await fetch('/registros?limit=50');
+      // Leer filtros — sin fecha = CURDATE() en backend
+      const valModulo    = document.getElementById('f-modulo').value;
+      const valCategoria = document.getElementById('f-categoria').value;
+      const valDesde     = document.getElementById('f-desde').value;
+      const valHasta     = document.getElementById('f-hasta').value;
+      const valHoraIni   = document.getElementById('f-hora-ini').value;
+      const valHoraFin   = document.getElementById('f-hora-fin').value;
+
+      const qp = new URLSearchParams();
+      if (valModulo    && valModulo    !== 'Todos') qp.set('modulo',    valModulo);
+      if (valCategoria && valCategoria !== 'Todos') qp.set('categoria', valCategoria);
+      if (valDesde)    qp.set('desde',   valDesde);
+      if (valHasta)    qp.set('hasta',   valHasta);
+      if (valHoraIni)  qp.set('hora_ini', valHoraIni);
+      if (valHoraFin)  qp.set('hora_fin', valHoraFin);
+
+      const res = await fetch(`/api/dashboard-data?${qp.toString()}`);
       if (!res.ok) throw new Error();
-      const datosCrudos = await res.json();
+      const { registros, actividad, counts } = await res.json();
 
       // Server status
       document.getElementById('srv-dot').style.cssText = 'width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;';
       document.getElementById('m-srv').textContent = 'ONLINE';
       document.getElementById('m-srv').style.color = '#4ade80';
 
-      // Filters
-      const valModulo   = document.getElementById('f-modulo').value;
-      const valCategoria = document.getElementById('f-categoria').value;
-      const valFecha    = document.getElementById('f-fecha').value;
-      const valHoraIni  = document.getElementById('f-hora-ini').value;
-      const valHoraFin  = document.getElementById('f-hora-fin').value;
-
-      let datos = datosCrudos.filter(reg => {
-        let ok = true;
-        if (valModulo    !== 'Todos' && reg.modulo    !== valModulo)    ok = false;
-        if (valCategoria !== 'Todos' && reg.categoria !== valCategoria) ok = false;
-        const f = new Date(reg.fecha_registro);
-        if (!isNaN(f.getTime())) {
-          if (valFecha) {
-            const d = `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}-${String(f.getDate()).padStart(2,'0')}`;
-            if (d !== valFecha) ok = false;
-          }
-          if (valHoraIni || valHoraFin) {
-            const hm = `${String(f.getHours()).padStart(2,'0')}:${String(f.getMinutes()).padStart(2,'0')}`;
-            if (valHoraIni && hm < valHoraIni) ok = false;
-            if (valHoraFin && hm > valHoraFin) ok = false;
-          }
-        }
-        return ok;
-      });
-
+      const datos = registros;
       datosGlobalesFiltrados = datos;
 
-      const esFiltrado = valModulo !== 'Todos' || valCategoria !== 'Todos' || valFecha || valHoraIni || valHoraFin;
-      document.getElementById('txt-viendo').textContent = esFiltrado ? `FILTRO (${datos.length})` : `ÚLTIMOS ${Math.min(datos.length,6)}`;
+      const esFiltrado = (valModulo && valModulo !== 'Todos') || (valCategoria && valCategoria !== 'Todos') || valDesde || valHasta || valHoraIni || valHoraFin;
+      const rangoLabel = valDesde && valHasta ? `${valDesde} → ${valHasta}` : valDesde ? `DESDE ${valDesde}` : valHasta ? `HASTA ${valHasta}` : 'FILTRO';
+      document.getElementById('txt-viendo').textContent = esFiltrado ? `${rangoLabel} (${datos.length})` : `TODOS (${datos.length})`;
 
-      // Chart
-      const conteoHoras = new Array(12).fill(0);
-      datos.forEach(reg => {
-        const f = new Date(reg.fecha_registro);
-        if (!isNaN(f.getTime())) { const idx = Math.floor(f.getHours()/2); if (idx>=0&&idx<12) conteoHoras[idx]++; }
-      });
-      const maxDet = Math.max(...conteoHoras, 1);
-      const hActual = Math.floor(new Date().getHours()/2);
-      const wrappers = document.getElementById('chart-bars').getElementsByClassName('bar-wrapper');
-      if (wrappers.length === 12) {
-        for (let i = 0; i < 12; i++) {
-          const barra = wrappers[i].querySelector('.bar');
-          const tooltip = wrappers[i].querySelector('.bar-tooltip');
-          const cnt = conteoHoras[i];
-          barra.style.height = (cnt===0 ? 5 : Math.max((cnt/maxDet)*100,10)) + '%';
-          tooltip.textContent = cnt;
-          if (i === hActual) { barra.style.borderTopColor='#fb923c'; barra.style.background='linear-gradient(180deg,rgba(251,146,60,0.9) 0%,rgba(251,146,60,0.08) 100%)'; barra.style.boxShadow='0 -3px 12px rgba(251,146,60,0.4)'; }
-          else if (!cnt)      { barra.style.borderTopColor='rgba(56,189,248,0.12)'; barra.style.background='rgba(56,189,248,0.02)'; barra.style.boxShadow='none'; }
-          else                { barra.style.borderTopColor='#38bdf8'; barra.style.background='linear-gradient(180deg,rgba(56,189,248,0.8) 0%,rgba(56,189,248,0.05) 100%)'; barra.style.boxShadow='0 -2px 10px rgba(56,189,248,0.18)'; }
-        }
+      // Stats: filtradas cuando hay filtro activo, globales cuando no
+      if (esFiltrado && counts) {
+        animateNumber(document.getElementById('m-rc'), counts.rc);
+        animateNumber(document.getElementById('m-rd'), counts.rd);
+        animateNumber(document.getElementById('m-pc'), counts.pc);
+        animateNumber(document.getElementById('m-pd'), counts.pd);
+      } else {
+        cargarStats();
       }
+
+      // Chart — desde el mismo response, respeta filtros activos
+      renderActividad(actividad);
 
       renderTimeline(datos);
 
       // Capture grid
       const grid  = document.getElementById('capture-grid');
       const slice = datos.slice(0,6);
+      const gridHash = slice.map(r => r.id + ':' + r.categoria).join('|');
+      if (gridHash !== _lastGridHash) {
+        _lastGridHash = gridHash;
       if (slice.length) {
         grid.innerHTML = slice.map((reg,i) => {
           const fObj  = new Date(reg.fecha_registro);
           const horaF = fObj.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
           const cat   = getCat(reg.categoria);
           if (reg.foto && reg.foto !== 'null') {
-            const url = `/fotos/${reg.foto}?t=${Date.now()}`;
+            const url = `/fotos/${reg.foto}`;
             const fechaBonita = fObj.toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
             const jsonR = JSON.stringify({
               url, id:reg.id, modulo:reg.modulo, tipo:reg.tipo_entrada, categoria:reg.categoria,
@@ -1257,9 +1626,15 @@
               nombre: reg.nombre || null,
               tipo_carro: reg.tipo_carro || null,
               placa_carro: reg.placa_carro || null,
-              foto_nombre: reg.foto || null
+              foto_nombre: reg.foto || null,
+              tipo_persona: reg.tipo_persona || null,
+              num_control: reg.num_control || null,
+              cargo: reg.cargo || null,
+              numero_placa: reg.numero_placa || null,
+              propietario: reg.propietario || null,
+              tipo_carro_placa: reg.tipo_carro_placa || null
             }).replace(/"/g,'&quot;');
-            return `<div class="face-card" onclick="abrirModal('${jsonR}')">
+            return `<div class="face-card face-card-new" style="animation-delay:${i*55}ms" onclick="abrirModal('${jsonR}')">
               <img src="${url}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="ID ${reg.id}">
               <div style="display:none;align-items:center;justify-content:center;flex-direction:column;gap:6px;width:100%;height:100%">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(56,189,248,.35)" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
@@ -1275,7 +1650,7 @@
               <div class="absolute top-2 right-2 cat-badge ${cat.cls}" style="backdrop-filter:blur(6px);">${cat.label}</div>
             </div>`;
           } else {
-            return `<div class="face-card" style="cursor:default;">
+            return `<div class="face-card face-card-new" style="animation-delay:${i*55}ms;cursor:default;">
               <div class="absolute top-2 right-2 cat-badge ${cat.cls}">${cat.label}</div>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${cat.color}" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
               <div class="text-center mt-3">
@@ -1288,32 +1663,78 @@
       } else {
         grid.innerHTML = `<div class="col-span-3 flex flex-col items-center justify-center py-12 opacity-40"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" style="margin-bottom:10px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p class="text-xs text-slate-400">No hay capturas</p></div>`;
       }
+      } // end gridHash check
 
       // Log list
       const lista = document.getElementById('log-list');
+      const listHash = datos.map(r => r.id + ':' + r.categoria).join('|');
+      if (listHash !== _lastListHash) {
+        _lastListHash = listHash;
       if (datos.length) {
         lista.innerHTML = datos.map(reg => {
-          const cat  = getCat(reg.categoria);
-          const fObj = new Date(reg.fecha_registro);
-          const hora = fObj.toLocaleTimeString('en-US',{hour12:false});
+          const cat   = getCat(reg.categoria);
+          const fObj  = new Date(reg.fecha_registro);
+          const hora  = fObj.toLocaleTimeString('en-US',{hour12:false});
           const fecha = fObj.toLocaleDateString('es-MX',{day:'2-digit',month:'short'}).toUpperCase();
-          return `<div class="log-row ${cat.rowCls}">
+          const fechaBonita = fObj.toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+          const horaModal   = fObj.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+          // Mostrar + REG solo si la categoria NO es conocida — nunca basarse en nombre (puede ser null tras bulk-update)
+          const yaRegistrado = reg.categoria === 'Rostro_Conocido' || reg.categoria === 'Placa_Conocida';
+          const sinNombre    = !yaRegistrado;
+          const jsonR = JSON.stringify({
+            url: reg.foto ? `/fotos/${reg.foto}` : '',
+            id: reg.id, modulo: reg.modulo, tipo: reg.tipo_entrada,
+            categoria: reg.categoria, fecha: fechaBonita, hora: horaModal,
+            nombre: reg.nombre || null, tipo_carro: reg.tipo_carro || null,
+            placa_carro: reg.placa_carro || null, foto_nombre: reg.foto || null,
+            tipo_persona: reg.tipo_persona || null,
+            num_control: reg.num_control || null,
+            cargo: reg.cargo || null,
+            numero_placa: reg.numero_placa || null,
+            propietario: reg.propietario || null,
+            tipo_carro_placa: reg.tipo_carro_placa || null
+          }).replace(/"/g,'&quot;');
+          const tipoBadge = reg.tipo_persona
+            ? `<span style="font-size:8px;font-weight:800;padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;${reg.tipo_persona==='Docente'?'background:rgba(167,139,250,0.15);color:#a78bfa;border:1px solid rgba(167,139,250,0.4)':'background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.35)'};">${reg.tipo_persona.toUpperCase()}</span>` : '';
+          const esPlaca = reg.tipo_entrada === 'Placa';
+          const tituloRow = esPlaca
+            ? (reg.numero_placa || reg.tipo_entrada.toUpperCase())
+            : (reg.nombre || reg.tipo_entrada.toUpperCase());
+          const detalle = esPlaca
+            ? (reg.propietario ? `<span style="font-size:9px;color:#4ade80;font-family:'JetBrains Mono',monospace;font-weight:700;">${reg.propietario}</span>` : '')
+            : reg.num_control
+            ? `<span style="font-size:9px;color:#38bdf8;font-family:'JetBrains Mono',monospace;font-weight:700;">N° ${reg.num_control}</span>`
+            : reg.cargo
+            ? `<span style="font-size:9px;color:#a78bfa;font-weight:600;">${reg.cargo}</span>`
+            : '';
+          return `<div class="log-row log-row-new ${cat.rowCls}" onclick="abrirModal('${jsonR}')" style="cursor:pointer;">
             <div style="width:34px;height:34px;border-radius:8px;background:${cat.color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:${cat.color};border:1px solid ${cat.color}44;font-family:'JetBrains Mono',monospace;">${cat.label}</div>
             <div style="flex:1;min-width:0;">
-              <div class="flex items-center gap-2">
-                <p class="text-xs font-bold text-slate-200">${reg.tipo_entrada.toUpperCase()}</p>
-                <span class="cat-badge ${cat.cls}" style="font-size:8px;">${reg.categoria || ''}</span>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <p class="text-xs font-bold text-slate-200">${tituloRow}</p>
+                ${tipoBadge}
+                <span class="cat-badge ${cat.cls}" style="font-size:8px;">${reg.categoria || 'SIN CLASIFICAR'}</span>
               </div>
-              <p class="text-[10px] text-slate-400 mt-0.5">${reg.modulo} · ${fecha}</p>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;">
+                ${detalle}
+                <span style="font-size:9px;color:#475569;">${reg.modulo} · ${fecha} · ${hora}</span>
+              </div>
             </div>
-            <div style="background:rgba(30,41,59,0.6);padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.05);">
+            ${sinNombre ? `<div style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.35);padding:4px 10px;border-radius:6px;flex-shrink:0;">
+              <p class="text-[10px] font-bold text-amber-400 font-mono-tech">+ REG</p>
+            </div>` : `<div style="background:rgba(30,41,59,0.6);padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
               <p class="text-[11px] text-slate-300 font-mono-tech">${hora}</p>
-            </div>
+            </div>`}
           </div>`;
         }).join('');
+        // Stagger rows — cap delay so long lists don't wait forever
+        lista.querySelectorAll('.log-row-new').forEach((el, i) => {
+          el.style.animationDelay = Math.min(i * 28, 280) + 'ms';
+        });
       } else {
         lista.innerHTML = `<div class="flex flex-col items-center justify-center py-12 opacity-40"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:10px"><circle cx="12" cy="12" r="10"/></svg><p class="text-xs text-slate-400">Sin registros</p></div>`;
       }
+      } // end listHash check
 
     } catch(e) {
       document.getElementById('srv-dot').style.cssText = 'width:6px;height:6px;border-radius:50%;background:#ef4444;';
@@ -1331,6 +1752,7 @@
   checkAuth();
   setInterval(actualizarDatos, 5000);
   setInterval(cargarStats, 10000);
+  setInterval(cargarActividadHoy, 60000);
 </script>
 </body>
 </html>
